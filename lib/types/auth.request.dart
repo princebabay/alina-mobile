@@ -31,3 +31,13 @@ class LoginRequest {
     return {'email': email, 'motDePasse': motDePasse};
   }
 }
+
+class RefreshTokenRequest {
+  final String refreshToken;
+
+  RefreshTokenRequest({required this.refreshToken});
+
+  Map<String, dynamic> toJson() {
+    return {'refreshToken': refreshToken};
+  }
+}

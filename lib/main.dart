@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/auth_screen.dart';
+import 'widgets/common/app_colors.dart';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
@@ -16,6 +17,13 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Alina',
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: AppColors.background,
+        fontFamily: 'sans-serif',
+        colorScheme: const ColorScheme.dark(primary: AppColors.primary, surface: AppColors.surface, onSurface: AppColors.textPrimary),
+      ),
       home: const AuthScreen(),
     );
   }

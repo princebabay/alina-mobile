@@ -32,12 +32,16 @@ class HomeHandler {
     try {
       final refreshToken = await StorageUtil.getRefreshToken();
       if (refreshToken != null) {
-        final response = await AuthService.revokeTokenAPI(
-          RefreshTokenRequest(refreshToken: refreshToken),
-        );
+        // final response = await AuthService.revokeTokenAPI(
+        //   RefreshTokenRequest(refreshToken: refreshToken),
+        // );
 
-        if (!response.success) {
-          return false;
+        try {
+          await AuthService.revokeTokenAPI(
+            RefreshTokenRequest(refreshToken: refreshToken),
+          );
+        } catch (_) {
+          // best effort : on déconnecte localement quoi qu'il arrive
         }
 
         await StorageUtil.deleteAccessToken();

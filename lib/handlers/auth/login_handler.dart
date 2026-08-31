@@ -41,8 +41,13 @@ class LoginHandler {
         if (!response.success) {
           return true;
         }
+
         await StorageUtil.saveAccessToken(
           accessToken: response.data!.accessToken,
+        );
+
+        await StorageUtil.saveRefreshToken(
+          refreshToken: response.data!.refreshToken,
         );
 
         return false;

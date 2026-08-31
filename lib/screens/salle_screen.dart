@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,9 +31,7 @@ class _SalleScreenState extends State<SalleScreen> {
   bool _isLeaving = false;
   bool _updatingMedia = false;
   bool _requestingPermissions = false;
-  bool _showVolume = false;
   double _audioLevel = 0;
-  double _volume = .8;
   String? _roomName;
   String? _error;
   LocalVideoTrack? _localVideoTrack;
@@ -55,26 +52,30 @@ class _SalleScreenState extends State<SalleScreen> {
   }
 
   Future<void> _requestInitialPermissions() async {
-    if (!Platform.isAndroid || _requestingPermissions) return;
+    if (_requestingPermissions) return;
     setState(() => _requestingPermissions = true);
     final statuses = await [Permission.camera, Permission.microphone].request();
     if (!mounted) return;
     setState(() => _requestingPermissions = false);
     final permanentlyDenied = <String>[
       if (statuses[Permission.camera]?.isPermanentlyDenied ?? false) 'caméra',
-      if (statuses[Permission.microphone]?.isPermanentlyDenied ?? false) 'microphone',
+      if (statuses[Permission.microphone]?.isPermanentlyDenied ?? false)
+        'microphone',
     ];
     if (permanentlyDenied.isNotEmpty) {
-      _showError('Permission ${permanentlyDenied.join(' et ')} définitivement refusée. Ouvrez les paramètres de l’application pour l’autoriser.');
+      _showError(
+        'Permission ${permanentlyDenied.join(' et ')} définitivement refusée. Ouvrez les paramètres de l’application pour l’autoriser.',
+      );
     }
   }
 
   Future<bool> _ensurePermission(Permission permission, String feature) async {
-    if (!Platform.isAndroid) return true;
     var status = await permission.status;
     if (status.isGranted) return true;
     if (status.isPermanentlyDenied) {
-      _showError('Permission $feature définitivement refusée. Ouvrez les paramètres de l’application pour l’autoriser.');
+      _showError(
+        'Permission $feature définitivement refusée. Ouvrez les paramètres de l’application pour l’autoriser.',
+      );
       return false;
     }
     if (_requestingPermissions) return false;
@@ -84,7 +85,9 @@ class _SalleScreenState extends State<SalleScreen> {
     setState(() => _requestingPermissions = false);
     if (status.isGranted) return true;
     if (status.isPermanentlyDenied) {
-      _showError('Permission $feature définitivement refusée. Ouvrez les paramètres de l’application pour l’autoriser.');
+      _showError(
+        'Permission $feature définitivement refusée. Ouvrez les paramètres de l’application pour l’autoriser.',
+      );
     }
     return false;
   }
@@ -94,9 +97,12 @@ class _SalleScreenState extends State<SalleScreen> {
     setIsConnected: (value) => _setIfMounted(() => _isConnected = value),
     setCameraEnabled: (value) => _setIfMounted(() => _cameraEnabled = value),
     setRoomName: (value) => _setIfMounted(() => _roomName = value),
-    setLocalVideoTrack: (value) => _setIfMounted(() => _localVideoTrack = value),
-    setMicrophoneEnabled: (value) => _setIfMounted(() => _microphoneEnabled = value),
-    setRemoteVideoTrack: (value) => _setIfMounted(() => _remoteVideoTrack = value),
+    setLocalVideoTrack: (value) =>
+        _setIfMounted(() => _localVideoTrack = value),
+    setMicrophoneEnabled: (value) =>
+        _setIfMounted(() => _microphoneEnabled = value),
+    setRemoteVideoTrack: (value) =>
+        _setIfMounted(() => _remoteVideoTrack = value),
     setRemoteAudioTrack: _setRemoteAudioTrack,
   );
 
@@ -108,9 +114,13 @@ class _SalleScreenState extends State<SalleScreen> {
     if (!mounted) return;
     setState(() => _remoteAudioTrack = track);
     if (track == null) return;
+    unawaited(track.start());
     LivekitService.analyzeAudio(track, (level) {
       final now = DateTime.now();
-      if (!mounted || (_lastVisualizerUpdate != null && now.difference(_lastVisualizerUpdate!).inMilliseconds < 80)) return;
+      if (!mounted ||
+          (_lastVisualizerUpdate != null &&
+              now.difference(_lastVisualizerUpdate!).inMilliseconds < 80))
+        return;
       _lastVisualizerUpdate = now;
       setState(() => _audioLevel = level);
     });
@@ -127,7 +137,8 @@ class _SalleScreenState extends State<SalleScreen> {
   Future<void> _toggleCamera() async {
     if (_updatingMedia) return;
     final nextState = !_cameraEnabled;
-    if (nextState && !await _ensurePermission(Permission.camera, 'caméra')) return;
+    if (nextState && !await _ensurePermission(Permission.camera, 'caméra'))
+      return;
     if (!mounted) return;
     setState(() => _updatingMedia = true);
     final error = await SalleHandler.toggleCamera(etat: nextState);
@@ -143,7 +154,9 @@ class _SalleScreenState extends State<SalleScreen> {
   Future<void> _toggleMicrophone() async {
     if (_updatingMedia) return;
     final nextState = !_microphoneEnabled;
-    if (nextState && !await _ensurePermission(Permission.microphone, 'microphone')) return;
+    if (nextState &&
+        !await _ensurePermission(Permission.microphone, 'microphone'))
+      return;
     if (!mounted) return;
     setState(() => _updatingMedia = true);
     final error = await SalleHandler.toggleMicrophone(etat: nextState);
@@ -175,7 +188,9 @@ class _SalleScreenState extends State<SalleScreen> {
   Future<void> _toggleFullscreen() async {
     final enteringFullscreen = !_isFullscreen;
     await SystemChrome.setEnabledSystemUIMode(
-      enteringFullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+      enteringFullscreen
+          ? SystemUiMode.immersiveSticky
+          : SystemUiMode.edgeToEdge,
     );
     if (mounted) setState(() => _isFullscreen = enteringFullscreen);
   }
@@ -183,6 +198,7 @@ class _SalleScreenState extends State<SalleScreen> {
   @override
   void dispose() {
     _messageTimer?.cancel();
+    unawaited(LivekitService.disconnect());
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     super.dispose();
   }
@@ -201,7 +217,10 @@ class _SalleScreenState extends State<SalleScreen> {
               padding: EdgeInsets.all(_isFullscreen ? 0 : 8),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(_isFullscreen ? 0 : 20),
-                child: RoomVideo(remoteTrack: _remoteVideoTrack, localTrack: localTrack),
+                child: RoomVideo(
+                  remoteTrack: _remoteVideoTrack,
+                  localTrack: localTrack,
+                ),
               ),
             ),
             Positioned(
@@ -225,7 +244,11 @@ class _SalleScreenState extends State<SalleScreen> {
                 top: 68,
                 left: 16,
                 right: 16,
-                child: SafeArea(top: !_isFullscreen, bottom: false, child: AppMessage(message: _error!)),
+                child: SafeArea(
+                  top: !_isFullscreen,
+                  bottom: false,
+                  child: AppMessage(message: _error!),
+                ),
               ),
             Positioned(
               left: 24,
@@ -238,7 +261,10 @@ class _SalleScreenState extends State<SalleScreen> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [AppColors.background.withValues(alpha: 0), AppColors.background.withValues(alpha: .92)],
+                      colors: [
+                        AppColors.background.withValues(alpha: 0),
+                        AppColors.background.withValues(alpha: .92),
+                      ],
                     ),
                   ),
                   child: Padding(
@@ -246,18 +272,20 @@ class _SalleScreenState extends State<SalleScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        RoomAudioVisualizer(level: _remoteAudioTrack == null ? 0 : _audioLevel),
+                        RoomAudioVisualizer(
+                          level: _remoteAudioTrack == null ? 0 : _audioLevel,
+                        ),
                         const SizedBox(height: 18),
                         RoomControls(
                           microphoneEnabled: _microphoneEnabled,
                           cameraEnabled: _cameraEnabled,
-                          volume: _volume,
-                          showVolume: _showVolume,
-                          enabled: !_updatingMedia && !_isLeaving && !_requestingPermissions,
-                          onMicrophonePressed: () => unawaited(_toggleMicrophone()),
+                          enabled:
+                              !_updatingMedia &&
+                              !_isLeaving &&
+                              !_requestingPermissions,
+                          onMicrophonePressed: () =>
+                              unawaited(_toggleMicrophone()),
                           onCameraPressed: () => unawaited(_toggleCamera()),
-                          onVolumePressed: () => setState(() => _showVolume = !_showVolume),
-                          onVolumeChanged: (value) => setState(() => _volume = value),
                         ),
                       ],
                     ),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:alina_mobile/types/api.response.dart';
 import 'package:alina_mobile/types/livekit.type.dart';
@@ -187,22 +188,16 @@ class LivekitService {
   ) {
     track.addAudioRenderer(
       onFrame: (frame) {
-        final samples = frame.data;
-
-        if (samples.isEmpty) {
-          callback(0);
-          return;
+        final samples = frame.data.buffer.asInt16List(
+          frame.data.offsetInBytes,
+          frame.data.lengthInBytes ~/ 2,
+        );
+        double sumSquares = 0;
+        for (final s in samples) {
+          sumSquares += s * s;
         }
-
-        double sum = 0;
-
-        for (final sample in samples) {
-          sum += sample.abs();
-        }
-
-        final average = sum / samples.length;
-
-        final level = (average * 100).clamp(0.0, 100.0);
+        final rms = sqrt(sumSquares / samples.length) / 32768;
+        final level = (rms * 100).clamp(0.0, 100.0);
 
         callback(level);
       },

@@ -17,8 +17,20 @@ class RoomVideo extends StatelessWidget {
         DecoratedBox(
           decoration: const BoxDecoration(color: AppColors.surfaceTertiary),
           child: remoteTrack == null
-              ? const Center(child: Icon(Icons.videocam_off_outlined, color: AppColors.textMuted, size: 34))
-              : ClipRRect(borderRadius: BorderRadius.circular(18), child: VideoTrackRenderer(remoteTrack!, fit: VideoViewFit.cover)),
+              ? const Center(
+                  child: Icon(
+                    Icons.videocam_off_outlined,
+                    color: AppColors.textMuted,
+                    size: 34,
+                  ),
+                )
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: VideoTrackRenderer(
+                    remoteTrack!,
+                    fit: VideoViewFit.cover,
+                  ),
+                ),
         ),
         if (localTrack != null)
           Positioned(
@@ -29,7 +41,11 @@ class RoomVideo extends StatelessWidget {
               child: Container(
                 width: 104,
                 height: 142,
-                decoration: BoxDecoration(color: AppColors.surface, border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 child: VideoTrackRenderer(localTrack!, fit: VideoViewFit.cover),
               ),
             ),

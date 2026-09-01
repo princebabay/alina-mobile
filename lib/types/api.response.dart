@@ -33,12 +33,12 @@ class ApiResponse<T> {
 
   factory ApiResponse.fromJson(
     Map<String, dynamic> json,
-    T Function(dynamic data) fromData,
+    T Function(dynamic data)? fromData,
   ) {
     return ApiResponse<T>(
       success: json['success'],
       message: json['message'],
-      data: json['success'] == true && json['data'] != null
+      data: json['success'] == true && json['data'] != null && fromData != null
           ? fromData(json['data'])
           : null,
       errors: json['errors'],

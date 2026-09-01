@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Alina utilise la caméra pour partager votre vidéo dans une salle.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Alina utilise le microphone pour vous permettre de parler dans une salle.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

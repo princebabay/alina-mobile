@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../handlers/home_handler.dart';
+import '../services/session_service.dart';
 import '../widgets/common/app_button.dart';
 import '../widgets/common/app_colors.dart';
 import '../widgets/common/app_logo.dart';
@@ -26,22 +27,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _joinRoom() async {
     if (_isBusy) return;
+    debugPrint('[HomeScreen] Rejoindre une session demandé');
     setState(() { _joining = true; _error = null; });
     final error = await HomeHandler.joinRoom(code: _code);
     if (!mounted) return;
     if (error == null) {
+      await SessionService.synchronizePendingDisconnections();
+      if (!mounted) return;
+      debugPrint('[HomeScreen] Navigation vers Salle');
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SalleScreen()));
       return;
     }
+    debugPrint('[HomeScreen] Impossible de rejoindre la session: $error');
     setState(() { _joining = false; _error = error; });
   }
 
   Future<void> _disconnect() async {
     if (_isBusy) return;
+    debugPrint('[HomeScreen] Déconnexion demandée');
     setState(() { _disconnecting = true; _error = null; });
+    await SessionService.synchronizePendingDisconnections();
+    if (!mounted) return;
     final disconnected = await HomeHandler.deconnexion();
     if (!mounted) return;
     if (disconnected) {
+      debugPrint('[HomeScreen] Navigation vers Auth');
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const AuthScreen()),
         (route) => false,

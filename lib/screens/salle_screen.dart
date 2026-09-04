@@ -23,6 +23,7 @@ class SalleScreen extends StatefulWidget {
 }
 
 class _SalleScreenState extends State<SalleScreen> {
+  late final ParticipantPresenceManager _participantPresenceManager;
   bool _isEnDirect = false;
   bool _isConnected = false;
   bool _cameraEnabled = false;
@@ -43,20 +44,27 @@ class _SalleScreenState extends State<SalleScreen> {
   @override
   void initState() {
     super.initState();
+    _participantPresenceManager =
+        SalleHandler.createParticipantPresenceManager();
     unawaited(_prepareRoom());
   }
 
   Future<void> _prepareRoom() async {
+    debugPrint('[SalleScreen] Préparation de la salle');
     await _requestInitialPermissions();
     if (mounted) await _initializeRoom();
   }
 
   Future<void> _requestInitialPermissions() async {
     if (_requestingPermissions) return;
+    debugPrint('[SalleScreen] Demande des permissions caméra et microphone');
     setState(() => _requestingPermissions = true);
     final statuses = await [Permission.camera, Permission.microphone].request();
     if (!mounted) return;
     setState(() => _requestingPermissions = false);
+    debugPrint(
+      '[SalleScreen] Permissions — caméra: ${statuses[Permission.camera]}, microphone: ${statuses[Permission.microphone]}',
+    );
     final permanentlyDenied = <String>[
       if (statuses[Permission.camera]?.isPermanentlyDenied ?? false) 'caméra',
       if (statuses[Permission.microphone]?.isPermanentlyDenied ?? false)
@@ -88,11 +96,14 @@ class _SalleScreenState extends State<SalleScreen> {
       _showError(
         'Permission $feature définitivement refusée. Ouvrez les paramètres de l’application pour l’autoriser.',
       );
+    } else {
+      _showError('Permission $feature refusée.');
     }
     return false;
   }
 
   Future<void> _initializeRoom() => SalleHandler.initialize(
+    participantPresenceManager: _participantPresenceManager,
     setIsEnDirect: (value) => _setIfMounted(() => _isEnDirect = value),
     setIsConnected: (value) => _setIfMounted(() => _isConnected = value),
     setCameraEnabled: (value) => _setIfMounted(() => _cameraEnabled = value),
@@ -119,8 +130,9 @@ class _SalleScreenState extends State<SalleScreen> {
       final now = DateTime.now();
       if (!mounted ||
           (_lastVisualizerUpdate != null &&
-              now.difference(_lastVisualizerUpdate!).inMilliseconds < 80))
+              now.difference(_lastVisualizerUpdate!).inMilliseconds < 80)) {
         return;
+      }
       _lastVisualizerUpdate = now;
       setState(() => _audioLevel = level);
     });
@@ -129,6 +141,7 @@ class _SalleScreenState extends State<SalleScreen> {
   void _showError(String message) {
     _messageTimer?.cancel();
     setState(() => _error = message);
+    debugPrint('[SalleScreen] Show error message : $message');
     _messageTimer = Timer(const Duration(seconds: 4), () {
       if (mounted) setState(() => _error = null);
     });
@@ -137,8 +150,9 @@ class _SalleScreenState extends State<SalleScreen> {
   Future<void> _toggleCamera() async {
     if (_updatingMedia) return;
     final nextState = !_cameraEnabled;
-    if (nextState && !await _ensurePermission(Permission.camera, 'caméra'))
+    if (nextState && !await _ensurePermission(Permission.camera, 'caméra')) {
       return;
+    }
     if (!mounted) return;
     setState(() => _updatingMedia = true);
     final error = await SalleHandler.toggleCamera(etat: nextState);
@@ -155,8 +169,9 @@ class _SalleScreenState extends State<SalleScreen> {
     if (_updatingMedia) return;
     final nextState = !_microphoneEnabled;
     if (nextState &&
-        !await _ensurePermission(Permission.microphone, 'microphone'))
+        !await _ensurePermission(Permission.microphone, 'microphone')) {
       return;
+    }
     if (!mounted) return;
     setState(() => _updatingMedia = true);
     final error = await SalleHandler.toggleMicrophone(etat: nextState);
@@ -171,8 +186,11 @@ class _SalleScreenState extends State<SalleScreen> {
 
   Future<void> _leaveRoom() async {
     if (_isLeaving) return;
+    debugPrint('[SalleScreen] Sortie de salle demandée');
     setState(() => _isLeaving = true);
-    final left = await SalleHandler.quitterSalle();
+    final left = await SalleHandler.quitterSalle(
+      participantPresenceManager: _participantPresenceManager,
+    );
     if (!mounted) return;
     if (!left) {
       setState(() => _isLeaving = false);
@@ -183,6 +201,7 @@ class _SalleScreenState extends State<SalleScreen> {
       MaterialPageRoute(builder: (_) => const HomeScreen()),
       (route) => false,
     );
+    debugPrint('[SalleScreen] Navigation vers Home');
   }
 
   Future<void> _toggleFullscreen() async {
@@ -193,6 +212,7 @@ class _SalleScreenState extends State<SalleScreen> {
           : SystemUiMode.edgeToEdge,
     );
     if (mounted) setState(() => _isFullscreen = enteringFullscreen);
+    debugPrint('[SalleScreen] Plein écran: $enteringFullscreen');
   }
 
   @override

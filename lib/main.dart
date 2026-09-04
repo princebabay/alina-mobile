@@ -4,7 +4,9 @@ import 'screens/auth_screen.dart';
 import 'widgets/common/app_colors.dart';
 
 Future<void> main() async {
+  debugPrint('[App] Démarrage de l’application');
   await dotenv.load(fileName: ".env");
+  debugPrint('[App] Configuration chargée');
 
   runApp(const MyApp());
 }

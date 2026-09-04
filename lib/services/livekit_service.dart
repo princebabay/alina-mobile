@@ -1,12 +1,7 @@
-import 'dart:convert';
 import 'dart:math';
 
-import 'package:alina_mobile/types/api.response.dart';
-import 'package:alina_mobile/types/livekit.type.dart';
-import 'package:alina_mobile/utils/request_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 import 'package:livekit_client/livekit_client.dart';
 
 class LivekitService {
@@ -18,36 +13,19 @@ class LivekitService {
     return room;
   }
 
-  static Future<ApiResponse<TokenResponse>> generateToken(
-    TokenRequest data,
-  ) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$apiUrl/livekit/token'),
-        headers: await RequestUtil.authHeaders(),
-        body: jsonEncode(data.toJson()),
-      );
-
-      final json = jsonDecode(response.body);
-
-      return ApiResponse.fromJson(
-        json,
-        (jsonData) => TokenResponse.fromJson(jsonData),
-      );
-    } catch (error) {
-      rethrow;
-    }
-  }
-
   static Future<Room> connect({required String token}) async {
+    debugPrint('[LivekitService] Connexion à la room');
     room = Room();
     await room!.connect(serverUrl, token);
+    debugPrint('[LivekitService] Room connectée: ${room!.name}');
     return room!;
   }
 
   static Future<void> disconnect() async {
+    debugPrint('[LivekitService] Déconnexion de la room');
     await room?.disconnect();
     room = null;
+    debugPrint('[LivekitService] Room déconnectée');
   }
 
   static Future<void> enableCamera() async {
@@ -56,6 +34,7 @@ class LivekitService {
     }
 
     await room!.localParticipant?.setCameraEnabled(true);
+    debugPrint('[LivekitService] Caméra activée');
   }
 
   static Future<void> disableCamera() async {
@@ -64,6 +43,7 @@ class LivekitService {
     }
 
     await room!.localParticipant?.setCameraEnabled(false);
+    debugPrint('[LivekitService] Caméra désactivée');
   }
 
   static Future<void> enableMicrophone() async {
@@ -72,6 +52,7 @@ class LivekitService {
     }
 
     await room!.localParticipant?.setMicrophoneEnabled(true);
+    debugPrint('[LivekitService] Microphone activé');
   }
 
   static Future<void> disableMicrophone() async {
@@ -80,6 +61,7 @@ class LivekitService {
     }
 
     await room!.localParticipant?.setMicrophoneEnabled(false);
+    debugPrint('[LivekitService] Microphone désactivé');
   }
 
   static LocalVideoTrack? getCameraTrack() {
@@ -165,14 +147,12 @@ class LivekitService {
 
     room!.events.listen((event) {
       if (event is ParticipantConnectedEvent) {
-        final participant = event.participant;
-        debugPrint("Participant connecté : ${participant.identity}");
+        debugPrint('[LivekitService] Participant distant connecté');
         callback(true);
       }
 
       if (event is ParticipantDisconnectedEvent) {
-        final participant = event.participant;
-        debugPrint("Participant connecté : ${participant.identity}");
+        debugPrint('[LivekitService] Participant distant déconnecté');
         callback(false);
       }
     });
@@ -180,6 +160,37 @@ class LivekitService {
     if (room!.remoteParticipants.isNotEmpty) {
       callback(true);
     }
+  }
+
+  static void onConnectionStateChange({
+    required void Function() onReconnecting,
+    required void Function() onReconnected,
+    required void Function() onDisconnected,
+  }) {
+    if (room == null) {
+      return;
+    }
+
+    room!.events.listen((event) {
+      debugPrint('[LivekitService] EVENT: ${event.runtimeType}');
+
+      if (event is RoomReconnectingEvent ||
+          event is RoomResumingEvent ||
+          event is RoomAttemptReconnectEvent) {
+        debugPrint('[LivekitService] Room en reconnexion');
+        onReconnecting();
+      }
+
+      if (event is RoomReconnectedEvent || event is RoomConnectedEvent) {
+        debugPrint('[LivekitService] Room reconnectée');
+        onReconnected();
+      }
+
+      if (event is RoomDisconnectedEvent) {
+        debugPrint('[LivekitService] Room déconnectée');
+        onDisconnected();
+      }
+    });
   }
 
   static void analyzeAudio(

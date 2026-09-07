@@ -25,10 +25,6 @@ class HomeHandler {
         return joinSession.message;
       }
 
-      StorageUtil.saveSession(session: joinSession.data!.session);
-      StorageUtil.saveParticipant(participant: joinSession.data!.participant);
-      StorageUtil.saveSessionToken(token: joinSession.data!.token);
-
       await LivekitService.connect(token: joinSession.data!.token);
 
       debugPrint('[HomeHandler] Session rejointe avec succès');

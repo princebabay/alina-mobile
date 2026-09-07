@@ -39,48 +39,6 @@ class SessionService {
     }
   }
 
-  static Future<ApiResponse<bool>> checkSessionActivity(
-    SessionCodeRequest data,
-  ) async {
-    try {
-      debugPrint('[SessionService] Vérification activité session');
-      final response = await http.post(
-        Uri.parse('$apiUrl/sessions/check-active'),
-        headers: await RequestUtil.authHeaders(),
-        body: jsonEncode(data.toJson()),
-      );
-
-      final json = jsonDecode(response.body);
-      debugPrint('[SessionService] Activité vérifiée (${response.statusCode})');
-
-      return ApiResponse.fromJson(json, (jsonData) => jsonData as bool);
-    } catch (error) {
-      debugPrint('[SessionService] Erreur vérification activité: $error');
-      rethrow;
-    }
-  }
-
-  static Future<ApiResponse<bool>> checkSessionExistence(
-    SessionCodeRequest data,
-  ) async {
-    try {
-      debugPrint('[SessionService] Vérification existence session');
-      final response = await http.post(
-        Uri.parse('$apiUrl/sessions/check-existence'),
-        headers: await RequestUtil.authHeaders(),
-        body: jsonEncode(data.toJson()),
-      );
-
-      final json = jsonDecode(response.body);
-      debugPrint('[SessionService] Existence vérifiée (${response.statusCode})');
-
-      return ApiResponse.fromJson(json, (jsonData) => jsonData as bool);
-    } catch (error) {
-      debugPrint('[SessionService] Erreur vérification existence: $error');
-      rethrow;
-    }
-  }
-
   static Future<ApiResponse<JoinSessionResponse>> joinSession(
     JoinSessionRequest data,
   ) async {

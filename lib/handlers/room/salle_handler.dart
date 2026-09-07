@@ -16,40 +16,45 @@ class ParticipantPresenceManager {
   }) : _presence = initialPresence;
 
   ParticipantPresence _presence;
+  Future<void> _operationQueue = Future.value();
 
   Future<ApiResponse<ParticipantHistoryResponse>?> connect({
     required String code,
+  }) {
+    return _enqueue(() => _connect(code: code));
+  }
+
+  Future<ApiResponse<ParticipantHistoryResponse>?> _connect({
+    required String code,
   }) async {
     debugPrint('[PresenceManager] Demande de connexion participant');
-    final participantDisconnect = await StorageUtil.getParticipantDisconnect();
+    try {
+      final participantDisconnect =
+          await StorageUtil.getParticipantDisconnect();
+      if (participantDisconnect != null) {
+        debugPrint(
+          '[PresenceManager] Nouvelle tentative de déconnexion en attente',
+        );
+        final pendingResponse = await SessionService.disconnectParticipant(
+          DisconnectParticipantRequest(
+            code: participantDisconnect.code,
+            date: participantDisconnect.date,
+          ),
+        );
+        if (!pendingResponse.success) return pendingResponse;
 
-    if (participantDisconnect != null) {
-      debugPrint(
-        '[PresenceManager] Nouvelle tentative de déconnexion en attente',
-      );
-      final response = await SessionService.disconnectParticipant(
-        DisconnectParticipantRequest(
-          code: participantDisconnect.code,
-          date: participantDisconnect.date,
-        ),
-      );
-
-      if (response.success) {
         await StorageUtil.deleteParticipantDisconnect();
         debugPrint('[PresenceManager] Déconnexion en attente traitée');
       }
-    }
 
-    if (_presence != ParticipantPresence.disconnected) {
-      debugPrint(
-        '[PresenceManager] Connexion ignorée, état actuel: $_presence',
-      );
-      return null;
-    }
+      if (_presence != ParticipantPresence.disconnected) {
+        debugPrint(
+          '[PresenceManager] Connexion ignorée, état actuel: $_presence',
+        );
+        return null;
+      }
 
-    _presence = ParticipantPresence.connecting;
-
-    try {
+      _presence = ParticipantPresence.connecting;
       final response = await SessionService.connectParticipant(
         SessionCodeRequest(code: code),
       );
@@ -66,6 +71,12 @@ class ParticipantPresenceManager {
   }
 
   Future<ApiResponse<ParticipantHistoryResponse>?> disconnect({
+    required String code,
+  }) {
+    return _enqueue(() => _disconnect(code: code));
+  }
+
+  Future<ApiResponse<ParticipantHistoryResponse>?> _disconnect({
     required String code,
   }) async {
     debugPrint('[PresenceManager] Demande de déconnexion participant');
@@ -111,6 +122,29 @@ class ParticipantPresenceManager {
       rethrow;
     }
   }
+
+  Future<ApiResponse<Null>> leave({required String code}) {
+    return _enqueue(() async {
+      debugPrint('[PresenceManager] Départ définitif du participant');
+      try {
+        final response = await SessionService.leaveParticipant(
+          DisconnectParticipantRequest(code: code),
+        );
+        _presence = ParticipantPresence.disconnected;
+        return response;
+      } catch (error) {
+        _presence = ParticipantPresence.disconnected;
+        debugPrint('[PresenceManager] Erreur départ participant: $error');
+        rethrow;
+      }
+    });
+  }
+
+  Future<T> _enqueue<T>(Future<T> Function() operation) {
+    final result = _operationQueue.then((_) => operation());
+    _operationQueue = result.then<void>((_) {}, onError: (_, _) {});
+    return result;
+  }
 }
 
 class SalleHandler {
@@ -118,6 +152,42 @@ class SalleHandler {
     ParticipantPresence initialPresence = ParticipantPresence.disconnected,
   }) {
     return ParticipantPresenceManager(initialPresence: initialPresence);
+  }
+
+  static void _connectParticipantInBackground({
+    required ParticipantPresenceManager participantPresenceManager,
+    required String code,
+  }) {
+    unawaited(() async {
+      try {
+        final response = await participantPresenceManager.connect(code: code);
+        if (response != null && !response.success) {
+          debugPrint(
+            '[SalleHandler] Présence participant non déclarée: ${response.message}',
+          );
+        }
+      } catch (error) {
+        debugPrint('[SalleHandler] Erreur présence participant: $error');
+      }
+    }());
+  }
+
+  static void _disconnectParticipantInBackground({
+    required ParticipantPresenceManager participantPresenceManager,
+    required String code,
+  }) {
+    unawaited(() async {
+      try {
+        final response = await participantPresenceManager.disconnect(code: code);
+        if (response != null && !response.success) {
+          debugPrint(
+            '[SalleHandler] Présence participant non déconnectée: ${response.message}',
+          );
+        }
+      } catch (error) {
+        debugPrint('[SalleHandler] Erreur déconnexion participant: $error');
+      }
+    }());
   }
 
   static Future<void> initialize({
@@ -145,26 +215,6 @@ class SalleHandler {
 
         setRoomName(code);
 
-        await participantPresenceManager.connect(code: code);
-
-        LivekitService.onConnectionStateChange(
-          onReconnecting: () {
-            debugPrint('[SalleHandler] LiveKit en reconnexion');
-            setIsConnected(false);
-            unawaited(participantPresenceManager.disconnect(code: code));
-          },
-          onReconnected: () {
-            debugPrint('[SalleHandler] LiveKit reconnecté');
-            setIsConnected(true);
-            unawaited(participantPresenceManager.connect(code: code));
-          },
-          onDisconnected: () {
-            debugPrint('[SalleHandler] LiveKit déconnecté');
-            setIsConnected(false);
-            unawaited(participantPresenceManager.disconnect(code: code));
-          },
-        );
-
         await LivekitService.enableCamera();
         final localTrack = LivekitService.getCameraTrack();
         setLocalVideoTrack(localTrack);
@@ -182,6 +232,38 @@ class SalleHandler {
           debugPrint('[SalleHandler] Piste audio distante reçue');
           setRemoteAudioTrack(track);
         });
+
+        LivekitService.onConnectionStateChange(
+          onReconnecting: () {
+            debugPrint('[SalleHandler] LiveKit en reconnexion');
+            setIsConnected(false);
+            _disconnectParticipantInBackground(
+              participantPresenceManager: participantPresenceManager,
+              code: code,
+            );
+          },
+          onReconnected: () {
+            debugPrint('[SalleHandler] LiveKit reconnecté');
+            setIsConnected(true);
+            _connectParticipantInBackground(
+              participantPresenceManager: participantPresenceManager,
+              code: code,
+            );
+          },
+          onDisconnected: () {
+            debugPrint('[SalleHandler] LiveKit déconnecté');
+            setIsConnected(false);
+            _disconnectParticipantInBackground(
+              participantPresenceManager: participantPresenceManager,
+              code: code,
+            );
+          },
+        );
+
+        _connectParticipantInBackground(
+          participantPresenceManager: participantPresenceManager,
+          code: code,
+        );
       }
       if (room == null) debugPrint('[SalleHandler] Aucune room disponible');
       return;
@@ -198,10 +280,19 @@ class SalleHandler {
       final room = LivekitService.getRoom();
       final code = room?.name;
       debugPrint('[SalleHandler] Sortie de la salle');
-      await LivekitService.disconnect();
       if (code != null) {
-        unawaited(participantPresenceManager.disconnect(code: code));
+        try {
+          final response = await participantPresenceManager.leave(code: code);
+          if (!response.success) {
+            debugPrint(
+              '[SalleHandler] Départ participant non confirmé: ${response.message}',
+            );
+          }
+        } catch (error) {
+          debugPrint('[SalleHandler] Erreur départ participant: $error');
+        }
       }
+      await LivekitService.disconnect();
       debugPrint('[SalleHandler] Salle quittée');
       return true;
     } catch (error) {

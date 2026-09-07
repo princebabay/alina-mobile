@@ -151,4 +151,25 @@ class SessionService {
       rethrow;
     }
   }
+
+  static Future<ApiResponse<Null>> leaveParticipant(
+    DisconnectParticipantRequest data,
+  ) async {
+    try {
+      debugPrint('[SessionService] Départ définitif du participant');
+      final response = await http.post(
+        Uri.parse('$apiUrl/sessions/participant/leave'),
+        headers: await RequestUtil.authHeaders(),
+        body: jsonEncode(data.toJson()),
+      );
+
+      final json = jsonDecode(response.body);
+      debugPrint('[SessionService] Départ traité (${response.statusCode})');
+
+      return ApiResponse.fromJson(json, null);
+    } catch (error) {
+      debugPrint('[SessionService] Erreur départ participant: $error');
+      rethrow;
+    }
+  }
 }

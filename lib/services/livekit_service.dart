@@ -8,12 +8,17 @@ class LivekitService {
   static final String apiUrl = dotenv.env['API_URL']!;
   static final String serverUrl = dotenv.env['VITE_LIVEKIT_URL']!;
   static Room? room;
+  static final List<CancelListenFunc> _roomEventSubscriptions = [];
 
   static Room? getRoom() {
     return room;
   }
 
   static Future<Room> connect({required String token}) async {
+    if (room != null) {
+      await disconnect();
+    }
+
     debugPrint('[LivekitService] Connexion à la room');
     room = Room();
     await room!.connect(serverUrl, token);
@@ -23,9 +28,29 @@ class LivekitService {
 
   static Future<void> disconnect() async {
     debugPrint('[LivekitService] Déconnexion de la room');
-    await room?.disconnect();
-    room = null;
+    final currentRoom = room;
+
+    await _cancelRoomEventSubscriptions();
+
+    try {
+      await currentRoom?.disconnect();
+    } finally {
+      try {
+        await currentRoom?.dispose();
+      } finally {
+        if (identical(room, currentRoom)) {
+          room = null;
+        }
+      }
+    }
     debugPrint('[LivekitService] Room déconnectée');
+  }
+
+  static Future<void> _cancelRoomEventSubscriptions() async {
+    final subscriptions = List<CancelListenFunc>.from(_roomEventSubscriptions);
+    _roomEventSubscriptions.clear();
+
+    await Future.wait(subscriptions.map((unsubscribe) => unsubscribe()));
   }
 
   static Future<void> enableCamera() async {
@@ -91,15 +116,17 @@ class LivekitService {
       return;
     }
 
-    room!.events.listen((event) {
-      if (event is TrackSubscribedEvent) {
-        final track = event.track;
+    _roomEventSubscriptions.add(
+      room!.events.listen((event) {
+        if (event is TrackSubscribedEvent) {
+          final track = event.track;
 
-        if (track.kind == TrackType.AUDIO) {
-          callback(track as RemoteAudioTrack);
+          if (track.kind == TrackType.AUDIO) {
+            callback(track as RemoteAudioTrack);
+          }
         }
-      }
-    });
+      }),
+    );
 
     room!.remoteParticipants.forEach((_, participant) {
       participant.trackPublications.forEach((_, publication) {
@@ -119,15 +146,17 @@ class LivekitService {
       return;
     }
 
-    room!.events.listen((event) {
-      if (event is TrackSubscribedEvent) {
-        final track = event.track;
+    _roomEventSubscriptions.add(
+      room!.events.listen((event) {
+        if (event is TrackSubscribedEvent) {
+          final track = event.track;
 
-        if (track.kind == TrackType.VIDEO) {
-          callback(track as RemoteVideoTrack);
+          if (track.kind == TrackType.VIDEO) {
+            callback(track as RemoteVideoTrack);
+          }
         }
-      }
-    });
+      }),
+    );
 
     room!.remoteParticipants.forEach((_, participant) {
       participant.trackPublications.forEach((_, publication) {
@@ -145,17 +174,19 @@ class LivekitService {
       return;
     }
 
-    room!.events.listen((event) {
-      if (event is ParticipantConnectedEvent) {
-        debugPrint('[LivekitService] Participant distant connecté');
-        callback(true);
-      }
+    _roomEventSubscriptions.add(
+      room!.events.listen((event) {
+        if (event is ParticipantConnectedEvent) {
+          debugPrint('[LivekitService] Participant distant connecté');
+          callback(true);
+        }
 
-      if (event is ParticipantDisconnectedEvent) {
-        debugPrint('[LivekitService] Participant distant déconnecté');
-        callback(false);
-      }
-    });
+        if (event is ParticipantDisconnectedEvent) {
+          debugPrint('[LivekitService] Participant distant déconnecté');
+          callback(false);
+        }
+      }),
+    );
 
     if (room!.remoteParticipants.isNotEmpty) {
       callback(true);
@@ -171,26 +202,26 @@ class LivekitService {
       return;
     }
 
-    room!.events.listen((event) {
-      debugPrint('[LivekitService] EVENT: ${event.runtimeType}');
+    _roomEventSubscriptions.add(
+      room!.events.listen((event) {
+        if (event is RoomReconnectingEvent ||
+            event is RoomResumingEvent ||
+            event is RoomAttemptReconnectEvent) {
+          debugPrint('[LivekitService] Room en reconnexion');
+          onReconnecting();
+        }
 
-      if (event is RoomReconnectingEvent ||
-          event is RoomResumingEvent ||
-          event is RoomAttemptReconnectEvent) {
-        debugPrint('[LivekitService] Room en reconnexion');
-        onReconnecting();
-      }
+        if (event is RoomReconnectedEvent || event is RoomConnectedEvent) {
+          debugPrint('[LivekitService] Room reconnectée');
+          onReconnected();
+        }
 
-      if (event is RoomReconnectedEvent || event is RoomConnectedEvent) {
-        debugPrint('[LivekitService] Room reconnectée');
-        onReconnected();
-      }
-
-      if (event is RoomDisconnectedEvent) {
-        debugPrint('[LivekitService] Room déconnectée');
-        onDisconnected();
-      }
-    });
+        if (event is RoomDisconnectedEvent) {
+          debugPrint('[LivekitService] Room déconnectée');
+          onDisconnected();
+        }
+      }),
+    );
   }
 
   static void analyzeAudio(

@@ -41,7 +41,10 @@ class ParticipantPresenceManager {
             date: participantDisconnect.date,
           ),
         );
-        if (!pendingResponse.success) return pendingResponse;
+        if (!pendingResponse.success &&
+            !SessionService.isTerminalClientError(pendingResponse.statusCode)) {
+          return pendingResponse;
+        }
 
         await StorageUtil.deleteParticipantDisconnect();
         debugPrint('[PresenceManager] Déconnexion en attente traitée');

@@ -135,32 +135,33 @@ class SalleHandler {
       debugPrint('[SalleHandler] Initialisation de la salle');
       final room = LivekitService.getRoom();
       if (room != null) {
-        debugPrint('[SalleHandler] Room disponible: ${room.name}');
+        final code = room.name!;
+        debugPrint('[SalleHandler] Room disponible: $code');
         setIsConnected(true);
 
         LivekitService.isEnDirectCall((etat) {
           setIsEnDirect(etat);
         });
 
-        setRoomName(room.name);
+        setRoomName(code);
 
-        await participantPresenceManager.connect(code: room.name!);
+        await participantPresenceManager.connect(code: code);
 
         LivekitService.onConnectionStateChange(
           onReconnecting: () {
             debugPrint('[SalleHandler] LiveKit en reconnexion');
             setIsConnected(false);
-            unawaited(participantPresenceManager.disconnect(code: room.name!));
+            unawaited(participantPresenceManager.disconnect(code: code));
           },
           onReconnected: () {
             debugPrint('[SalleHandler] LiveKit reconnecté');
             setIsConnected(true);
-            unawaited(participantPresenceManager.connect(code: room.name!));
+            unawaited(participantPresenceManager.connect(code: code));
           },
           onDisconnected: () {
             debugPrint('[SalleHandler] LiveKit déconnecté');
             setIsConnected(false);
-            unawaited(participantPresenceManager.disconnect(code: room.name!));
+            unawaited(participantPresenceManager.disconnect(code: code));
           },
         );
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../handlers/home_handler.dart';
-import '../services/session_service.dart';
 import '../widgets/common/app_button.dart';
 import '../widgets/common/app_colors.dart';
 import '../widgets/common/app_logo.dart';
@@ -32,8 +31,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final error = await HomeHandler.joinRoom(code: _code);
     if (!mounted) return;
     if (error == null) {
-      await SessionService.synchronizePendingDisconnections();
-      if (!mounted) return;
       debugPrint('[HomeScreen] Navigation vers Salle');
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SalleScreen()));
       return;
@@ -46,8 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_isBusy) return;
     debugPrint('[HomeScreen] Déconnexion demandée');
     setState(() { _disconnecting = true; _error = null; });
-    await SessionService.synchronizePendingDisconnections();
-    if (!mounted) return;
     final disconnected = await HomeHandler.deconnexion();
     if (!mounted) return;
     if (disconnected) {

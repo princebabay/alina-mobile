@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../handlers/auth/login_handler.dart';
-import '../services/session_service.dart';
 import '../widgets/auth/login_form.dart';
 import '../widgets/auth/register_form.dart';
 import '../widgets/common/app_colors.dart';
@@ -31,8 +30,6 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!mounted) return;
     if (!needsAuthentication) {
       debugPrint('[AuthScreen] Session restaurée, navigation vers Home');
-      await SessionService.synchronizePendingDisconnections();
-      if (!mounted) return;
       Navigator.of(
         context,
       ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));

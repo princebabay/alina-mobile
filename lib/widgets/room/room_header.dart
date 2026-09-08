@@ -48,7 +48,7 @@ class RoomHeader extends StatelessWidget {
           _HeaderButton(icon: isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen, tooltip: isFullscreen ? 'Quitter le plein écran' : 'Plein écran', onPressed: onFullscreenPressed),
           const SizedBox(width: 6),
           _HeaderButton(
-            icon: Icons.close,
+            icon: isConnected ? Icons.close : Icons.cloud_off,
             tooltip: isConnected
                 ? 'Quitter la salle'
                 : 'Connexion LiveKit indisponible',

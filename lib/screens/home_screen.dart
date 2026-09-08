@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../handlers/home_handler.dart';
+import '../services/session_service.dart';
 import '../widgets/common/app_button.dart';
 import '../widgets/common/app_colors.dart';
 import '../widgets/common/app_logo.dart';
@@ -36,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _restoreActiveSession() async {
     try {
+      await SessionService.synchronizePendingSessionActions();
       final role = await HomeHandler.restoreActiveSession();
       if (!mounted) return;
 

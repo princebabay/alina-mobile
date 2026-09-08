@@ -35,12 +35,24 @@ class HomeHandler {
         final leaveDate = DateTime.parse(
           session.dateRevocation ?? session.dateExpiration,
         ).toUtc();
-        final leaveResponse = await SessionService.leaveParticipant(
-          SessionEndRequest(code: session.code, date: leaveDate),
+        final leaveRequest = SessionDateRequest(
+          code: session.code,
+          date: leaveDate,
         );
 
-        if (!leaveResponse.success) {
-          throw Exception(leaveResponse.message);
+        try {
+          final leaveResponse = await SessionService.leaveParticipant(
+            SessionEndRequest(code: leaveRequest.code, date: leaveRequest.date),
+          );
+
+          if (!leaveResponse.success) {
+            throw Exception(leaveResponse.message);
+          }
+        } catch (_) {
+          await StorageUtil.saveParticipantLeave(
+            participantLeave: leaveRequest,
+          );
+          rethrow;
         }
 
         return null;

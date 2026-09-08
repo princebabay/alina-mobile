@@ -4,12 +4,36 @@ import 'package:alina_mobile/types/api.response.dart';
 import 'package:alina_mobile/types/session.request.dart';
 import 'package:alina_mobile/types/session.response.dart';
 import 'package:alina_mobile/utils/request_util.dart';
+import 'package:alina_mobile/utils/storage_util.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 class SessionService {
   static final String apiUrl = dotenv.env['API_URL']!;
+
+  static Future<void> synchronizePendingSessionActions() async {
+    final participantLeave = await StorageUtil.getParticipantLeave();
+
+    if (participantLeave == null) {
+      return;
+    }
+
+    final response = await leaveParticipant(
+      SessionEndRequest(
+        code: participantLeave.code,
+        date: participantLeave.date,
+      ),
+    );
+
+    if (response.success) {
+      await StorageUtil.deleteParticipantLeave();
+    } else {
+      debugPrint(
+        '[SessionService] Echec synchronisation leave: ${response.message}',
+      );
+    }
+  }
 
   static Future<ApiResponse<JoinSessionResponse>> joinSession(
     JoinSessionRequest data,

@@ -32,3 +32,21 @@ class SessionEndRequest extends SessionCodeRequest {
     };
   }
 }
+
+class SessionDateRequest extends SessionCodeRequest {
+  final DateTime date;
+
+  SessionDateRequest({required super.code, required this.date});
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {'code': code, 'date': date.toUtc().toIso8601String()};
+  }
+
+  factory SessionDateRequest.fromJson(Map<String, dynamic> json) {
+    return SessionDateRequest(
+      code: json['code'] as String,
+      date: DateTime.parse(json['date'] as String).toUtc(),
+    );
+  }
+}

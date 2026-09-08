@@ -1,6 +1,7 @@
 import 'package:alina_mobile/services/livekit_service.dart';
 import 'package:alina_mobile/services/session_service.dart';
 import 'package:alina_mobile/types/session.request.dart';
+import 'package:alina_mobile/utils/storage_util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart';
 
@@ -54,15 +55,25 @@ class SalleHandler {
       final code = LivekitService.getRoom()?.name;
 
       if (code != null) {
+        final leaveRequest = SessionDateRequest(
+          code: code,
+          date: DateTime.now().toUtc(),
+        );
+
         try {
           final response = await SessionService.leaveParticipant(
-            SessionEndRequest(code: code, date: DateTime.now().toUtc()),
+            SessionEndRequest(code: leaveRequest.code, date: leaveRequest.date),
           );
 
           if (!response.success) {
-            debugPrint('[SalleHandler] Depart participant non confirme');
+            await StorageUtil.saveParticipantLeave(
+              participantLeave: leaveRequest,
+            );
           }
         } catch (error) {
+          await StorageUtil.saveParticipantLeave(
+            participantLeave: leaveRequest,
+          );
           debugPrint('[SalleHandler] Erreur depart participant: $error');
         }
       }

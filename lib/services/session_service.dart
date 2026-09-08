@@ -12,6 +12,9 @@ import 'package:http/http.dart' as http;
 class SessionService {
   static final String apiUrl = dotenv.env['API_URL']!;
 
+  static bool isTerminalClientError(int? statusCode) =>
+      statusCode != null && statusCode >= 400 && statusCode < 500;
+
   static Future<void> synchronizePendingSessionActions() async {
     final participantLeave = await StorageUtil.getParticipantLeave();
 
@@ -26,7 +29,7 @@ class SessionService {
       ),
     );
 
-    if (response.success) {
+    if (response.success || isTerminalClientError(response.statusCode)) {
       await StorageUtil.deleteParticipantLeave();
     } else {
       debugPrint(
@@ -97,7 +100,7 @@ class SessionService {
       final json = jsonDecode(response.body);
       debugPrint('[SessionService] Départ traité (${response.statusCode})');
 
-      return ApiResponse.fromJson(json, null);
+      return ApiResponse.fromJson(json, null, statusCode: response.statusCode);
     } catch (error) {
       debugPrint('[SessionService] Erreur départ participant: $error');
       rethrow;

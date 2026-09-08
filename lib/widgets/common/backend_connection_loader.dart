@@ -4,11 +4,16 @@ import 'app_colors.dart';
 import 'app_logo.dart';
 
 class BackendConnectionLoader extends StatelessWidget {
-  const BackendConnectionLoader({super.key});
+  const BackendConnectionLoader({
+    super.key,
+    this.message = 'Connexion au backend...',
+  });
+
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
@@ -20,7 +25,7 @@ class BackendConnectionLoader extends StatelessWidget {
               CircularProgressIndicator(color: AppColors.primary),
               SizedBox(height: 16),
               Text(
-                'Connexion au backend...',
+                message,
                 style: TextStyle(color: AppColors.textNormal, fontSize: 15),
               ),
             ],

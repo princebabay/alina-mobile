@@ -3,12 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../services/health_service.dart';
-import '../services/session_service.dart';
 import '../widgets/common/backend_connection_loader.dart';
 import 'auth_screen.dart';
 
 const _backendCheckRetryDelay = Duration(seconds: 2);
-const _pendingDisconnectionsTimeout = Duration(seconds: 3);
 
 class BackendStartupScreen extends StatefulWidget {
   const BackendStartupScreen({super.key});
@@ -20,7 +18,6 @@ class BackendStartupScreen extends StatefulWidget {
 class _BackendStartupScreenState extends State<BackendStartupScreen> {
   Timer? _retryTimer;
   bool _isBackendReady = false;
-  bool _hasStartedSynchronization = false;
 
   @override
   void initState() {
@@ -36,7 +33,6 @@ class _BackendStartupScreenState extends State<BackendStartupScreen> {
         if (!mounted) return;
 
         setState(() => _isBackendReady = true);
-        _startSynchronizationAfterFirstAppFrame();
         return;
       }
     } catch (_) {
@@ -47,27 +43,6 @@ class _BackendStartupScreenState extends State<BackendStartupScreen> {
       _retryTimer = Timer(_backendCheckRetryDelay, () {
         unawaited(_checkBackend());
       });
-    }
-  }
-
-  void _startSynchronizationAfterFirstAppFrame() {
-    if (_hasStartedSynchronization) return;
-
-    _hasStartedSynchronization = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      unawaited(_synchronizePendingDisconnections());
-    });
-  }
-
-  Future<void> _synchronizePendingDisconnections() async {
-    try {
-      await SessionService.synchronizePendingDisconnections().timeout(
-        _pendingDisconnectionsTimeout,
-      );
-    } catch (error) {
-      debugPrint('[App] Synchronisation des deconnexions ignoree: $error');
     }
   }
 

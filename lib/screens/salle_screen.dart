@@ -23,7 +23,6 @@ class SalleScreen extends StatefulWidget {
 }
 
 class _SalleScreenState extends State<SalleScreen> {
-  late final ParticipantPresenceManager _participantPresenceManager;
   bool _isEnDirect = false;
   bool _isConnected = false;
   bool _cameraEnabled = false;
@@ -44,8 +43,6 @@ class _SalleScreenState extends State<SalleScreen> {
   @override
   void initState() {
     super.initState();
-    _participantPresenceManager =
-        SalleHandler.createParticipantPresenceManager();
     unawaited(_prepareRoom());
   }
 
@@ -103,7 +100,6 @@ class _SalleScreenState extends State<SalleScreen> {
   }
 
   Future<void> _initializeRoom() => SalleHandler.initialize(
-    participantPresenceManager: _participantPresenceManager,
     setIsEnDirect: (value) => _setIfMounted(() => _isEnDirect = value),
     setIsConnected: (value) => _setIfMounted(() => _isConnected = value),
     setCameraEnabled: (value) => _setIfMounted(() => _cameraEnabled = value),
@@ -188,9 +184,7 @@ class _SalleScreenState extends State<SalleScreen> {
     if (_isLeaving) return;
     debugPrint('[SalleScreen] Sortie de salle demandée');
     setState(() => _isLeaving = true);
-    final left = await SalleHandler.quitterSalle(
-      participantPresenceManager: _participantPresenceManager,
-    );
+    final left = await SalleHandler.quitterSalle();
     if (!mounted) return;
     if (!left) {
       setState(() => _isLeaving = false);

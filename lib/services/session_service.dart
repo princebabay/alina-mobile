@@ -4,40 +4,12 @@ import 'package:alina_mobile/types/api.response.dart';
 import 'package:alina_mobile/types/session.request.dart';
 import 'package:alina_mobile/types/session.response.dart';
 import 'package:alina_mobile/utils/request_util.dart';
-import 'package:alina_mobile/utils/storage_util.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 class SessionService {
   static final String apiUrl = dotenv.env['API_URL']!;
-
-  static bool isTerminalClientError(int? statusCode) =>
-      statusCode != null && statusCode >= 400 && statusCode < 500;
-
-  static Future<void> synchronizePendingDisconnections() async {
-    debugPrint('[SessionService] Synchronisation des déconnexions en attente');
-    final participantDisconnect = await StorageUtil.getParticipantDisconnect();
-
-    if (participantDisconnect == null) {
-      debugPrint('[SessionService] Aucune déconnexion en attente');
-      return;
-    }
-    debugPrint('[SessionService] Déconnexion en attente trouvée');
-
-    final response = await disconnectParticipant(
-      DisconnectParticipantRequest(
-        code: participantDisconnect.code,
-        date: participantDisconnect.date,
-      ),
-    );
-
-    if (response.success || isTerminalClientError(response.statusCode)) {
-      await StorageUtil.deleteParticipantDisconnect();
-    } else {
-      debugPrint('[SessionService] Échec synchronisation: ${response.message}');
-    }
-  }
 
   static Future<ApiResponse<JoinSessionResponse>> joinSession(
     JoinSessionRequest data,
@@ -51,7 +23,9 @@ class SessionService {
       );
 
       final json = jsonDecode(response.body);
-      debugPrint('[SessionService] Réponse join reçue (${response.statusCode})');
+      debugPrint(
+        '[SessionService] Réponse join reçue (${response.statusCode})',
+      );
 
       return ApiResponse.fromJson(
         json,
@@ -63,57 +37,30 @@ class SessionService {
     }
   }
 
-  static Future<ApiResponse<ParticipantHistoryResponse>> connectParticipant(
-    SessionCodeRequest data,
-  ) async {
+  static Future<ApiResponse<ActiveParticipantSessionResponse>>
+  getActiveParticipantSession() async {
     try {
-      debugPrint('[SessionService] Connexion du participant');
-      final response = await http.post(
-        Uri.parse('$apiUrl/sessions/participant/connect'),
+      final response = await http.get(
+        Uri.parse('$apiUrl/sessions/participant/active'),
         headers: await RequestUtil.authHeaders(),
-        body: jsonEncode(data.toJson()),
       );
 
       final json = jsonDecode(response.body);
-      debugPrint('[SessionService] Participant connecté (${response.statusCode})');
 
       return ApiResponse.fromJson(
         json,
-        (jsonData) => ParticipantHistoryResponse.fromJson(jsonData),
+        (jsonData) => ActiveParticipantSessionResponse.fromJson(jsonData),
       );
     } catch (error) {
-      debugPrint('[SessionService] Erreur connexion participant: $error');
-      rethrow;
-    }
-  }
-
-  static Future<ApiResponse<ParticipantHistoryResponse>> disconnectParticipant(
-    DisconnectParticipantRequest data,
-  ) async {
-    try {
-      debugPrint('[SessionService] Déconnexion du participant');
-      final response = await http.post(
-        Uri.parse('$apiUrl/sessions/participant/disconnect'),
-        headers: await RequestUtil.authHeaders(),
-        body: jsonEncode(data.toJson()),
+      debugPrint(
+        '[SessionService] Erreur recuperation participant actif: $error',
       );
-
-      final json = jsonDecode(response.body);
-      debugPrint('[SessionService] Participant déconnecté (${response.statusCode})');
-
-      return ApiResponse.fromJson(
-        json,
-        (jsonData) => ParticipantHistoryResponse.fromJson(jsonData),
-        statusCode: response.statusCode,
-      );
-    } catch (error) {
-      debugPrint('[SessionService] Erreur déconnexion participant: $error');
       rethrow;
     }
   }
 
   static Future<ApiResponse<Null>> leaveParticipant(
-    DisconnectParticipantRequest data,
+    SessionEndRequest data,
   ) async {
     try {
       debugPrint('[SessionService] Départ définitif du participant');

@@ -8,6 +8,61 @@ import 'package:flutter/foundation.dart';
 import '../services/livekit_service.dart';
 
 class HomeHandler {
+  static Future<String?> restoreActiveSession() async {
+    try {
+      final activeParticipant =
+          await SessionService.getActiveParticipantSession();
+
+      if (!activeParticipant.success) {
+        throw Exception(activeParticipant.message);
+      }
+
+      final activeSession = activeParticipant.data;
+
+      if (activeSession == null) {
+        return null;
+      }
+
+      final session = activeSession.session;
+      final sessionIsClosed =
+          !session.estActif ||
+          session.dateRevocation != null ||
+          !DateTime.parse(
+            session.dateExpiration,
+          ).toUtc().isAfter(DateTime.now().toUtc());
+
+      if (sessionIsClosed) {
+        final leaveDate = DateTime.parse(
+          session.dateRevocation ?? session.dateExpiration,
+        ).toUtc();
+        final leaveResponse = await SessionService.leaveParticipant(
+          SessionEndRequest(code: session.code, date: leaveDate),
+        );
+
+        if (!leaveResponse.success) {
+          throw Exception(leaveResponse.message);
+        }
+
+        return null;
+      }
+
+      final joinSession = await SessionService.joinSession(
+        JoinSessionRequest(code: session.code, role: activeSession.role),
+      );
+
+      if (!joinSession.success) {
+        throw Exception(joinSession.message);
+      }
+
+      await LivekitService.connect(token: joinSession.data!.token);
+
+      return activeSession.role;
+    } catch (error) {
+      debugPrint('[HomeHandler] Erreur restauration session: $error');
+      rethrow;
+    }
+  }
+
   static Future<String?> joinRoom({required String code}) async {
     debugPrint('[HomeHandler] Tentative de rejoindre une session');
     if (code.length != 6) {
@@ -49,7 +104,9 @@ class HomeHandler {
             RefreshTokenRequest(refreshToken: refreshToken),
           );
         } catch (_) {
-          debugPrint('[HomeHandler] Révocation distante impossible, nettoyage local');
+          debugPrint(
+            '[HomeHandler] Révocation distante impossible, nettoyage local',
+          );
           // best effort : on déconnecte localement quoi qu'il arrive
         }
 

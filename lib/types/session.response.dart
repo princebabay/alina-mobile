@@ -1,24 +1,22 @@
-class ParticipantHistoryResponse {
-  final int id;
-  final int participantId;
-  final DateTime dateConnexion;
-  final DateTime? dateDeconnexion;
+class ActiveParticipantSessionResponse {
+  final Participant participant;
+  final Session session;
+  final String role;
 
-  ParticipantHistoryResponse({
-    required this.id,
-    required this.participantId,
-    required this.dateConnexion,
-    this.dateDeconnexion,
+  ActiveParticipantSessionResponse({
+    required this.participant,
+    required this.session,
+    required this.role,
   });
 
-  factory ParticipantHistoryResponse.fromJson(Map<String, dynamic> json) {
-    return ParticipantHistoryResponse(
-      id: json['id'],
-      participantId: json['participantId'],
-      dateConnexion: DateTime.parse(json['dateConnexion']),
-      dateDeconnexion: json['dateDeconnexion'] == null
-          ? null
-          : DateTime.parse(json['dateDeconnexion']),
+  factory ActiveParticipantSessionResponse.fromJson(Map<String, dynamic> json) {
+    final participant = json['participant'] as Map<String, dynamic>;
+    final role = participant['role'] as Map<String, dynamic>;
+
+    return ActiveParticipantSessionResponse(
+      participant: Participant.fromJson(participant),
+      session: Session.fromJson(json['session']),
+      role: role['nom'] as String,
     );
   }
 }

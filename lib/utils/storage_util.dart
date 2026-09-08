@@ -1,9 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-import '../types/session.request.dart';
 
 class StorageUtil {
   static const storage = FlutterSecureStorage();
@@ -38,34 +34,5 @@ class StorageUtil {
   static Future<void> deleteRefreshToken() async {
     await storage.delete(key: "refreshToken");
     debugPrint('[StorageUtil] Refresh token supprimé');
-  }
-
-  static Future<void> saveParticipantDisconnect({
-    required SessionDateRequest participantDisconnect,
-  }) async {
-    await storage.write(
-      key: 'participantDisconnect',
-      value: jsonEncode(participantDisconnect.toJson()),
-    );
-    debugPrint('[StorageUtil] Déconnexion participant sauvegardée');
-  }
-
-  static Future<SessionDateRequest?> getParticipantDisconnect() async {
-    final participantDisconnect = await storage.read(
-      key: 'participantDisconnect',
-    );
-    debugPrint(
-      '[StorageUtil] Déconnexion participant présente: ${participantDisconnect != null}',
-    );
-    if (participantDisconnect == null) return null;
-
-    return SessionDateRequest.fromJson(
-      jsonDecode(participantDisconnect),
-    );
-  }
-
-  static Future<void> deleteParticipantDisconnect() async {
-    await storage.delete(key: 'participantDisconnect');
-    debugPrint('[StorageUtil] Déconnexion participant supprimée');
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../handlers/home_handler.dart';
@@ -5,6 +7,7 @@ import '../widgets/common/app_button.dart';
 import '../widgets/common/app_colors.dart';
 import '../widgets/common/app_logo.dart';
 import '../widgets/common/app_message.dart';
+import '../widgets/common/backend_connection_loader.dart';
 import '../widgets/home/session_code_field.dart';
 import 'auth_screen.dart';
 import 'salle_screen.dart';
@@ -20,29 +23,71 @@ class _HomeScreenState extends State<HomeScreen> {
   String _code = '';
   bool _joining = false;
   bool _disconnecting = false;
+  bool _restoringSession = true;
   String? _error;
 
   bool get _isBusy => _joining || _disconnecting;
 
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_restoreActiveSession());
+  }
+
+  Future<void> _restoreActiveSession() async {
+    try {
+      final role = await HomeHandler.restoreActiveSession();
+      if (!mounted) return;
+
+      if (role != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const SalleScreen()),
+        );
+        return;
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'Impossible de verifier votre session precedente.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _restoringSession = false);
+      }
+    }
+  }
+
   Future<void> _joinRoom() async {
     if (_isBusy) return;
     debugPrint('[HomeScreen] Rejoindre une session demandé');
-    setState(() { _joining = true; _error = null; });
+    setState(() {
+      _joining = true;
+      _error = null;
+    });
     final error = await HomeHandler.joinRoom(code: _code);
     if (!mounted) return;
     if (error == null) {
       debugPrint('[HomeScreen] Navigation vers Salle');
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SalleScreen()));
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const SalleScreen()));
       return;
     }
     debugPrint('[HomeScreen] Impossible de rejoindre la session: $error');
-    setState(() { _joining = false; _error = error; });
+    setState(() {
+      _joining = false;
+      _error = error;
+    });
   }
 
   Future<void> _disconnect() async {
     if (_isBusy) return;
     debugPrint('[HomeScreen] Déconnexion demandée');
-    setState(() { _disconnecting = true; _error = null; });
+    setState(() {
+      _disconnecting = true;
+      _error = null;
+    });
     final disconnected = await HomeHandler.deconnexion();
     if (!mounted) return;
     if (disconnected) {
@@ -61,6 +106,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_restoringSession) {
+      return const BackendConnectionLoader(
+        message: 'Verification de votre session...',
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(

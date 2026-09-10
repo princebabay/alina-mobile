@@ -1,4 +1,8 @@
 import 'package:alina_mobile/services/livekit_service.dart';
+import 'package:alina_mobile/services/session_service.dart';
+import 'package:alina_mobile/types/session.request.dart';
+import 'package:alina_mobile/utils/storage_util.dart';
+import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart';
 
 class SalleHandler {
@@ -14,42 +18,70 @@ class SalleHandler {
   }) async {
     try {
       final room = LivekitService.getRoom();
-      if (room != null) {
-        setIsConnected(true);
+      final code = room?.name;
 
-        LivekitService.isEnDirectCall((etat) {
-          setIsEnDirect(etat);
-        });
-
-        setRoomName(room.name);
-
-        await LivekitService.enableCamera();
-        final localTrack = LivekitService.getCameraTrack();
-        setLocalVideoTrack(localTrack);
-        setCameraEnabled(true);
-
-        await LivekitService.enableMicrophone();
-        setMicrophoneEnabled(true);
-
-        LivekitService.onRemoteVideoTrack((track) {
-          setRemoteVideoTrack(track);
-        });
-
-        LivekitService.onRemoteAudioTrack((track) {
-          setRemoteAudioTrack(track);
-        });
+      if (room == null || code == null) {
+        debugPrint('[SalleHandler] Aucune room disponible');
+        return;
       }
-      return;
+
+      setIsConnected(true);
+      setRoomName(code);
+
+      LivekitService.isEnDirectCall(setIsEnDirect);
+
+      await LivekitService.enableCamera();
+      setLocalVideoTrack(LivekitService.getCameraTrack());
+      setCameraEnabled(true);
+
+      await LivekitService.enableMicrophone();
+      setMicrophoneEnabled(true);
+
+      LivekitService.onRemoteVideoTrack(setRemoteVideoTrack);
+      LivekitService.onRemoteAudioTrack(setRemoteAudioTrack);
+
+      LivekitService.onConnectionStateChange(
+        onReconnecting: () => setIsConnected(false),
+        onReconnected: () => setIsConnected(true),
+        onDisconnected: () => setIsConnected(false),
+      );
     } catch (error) {
-      return;
+      debugPrint('[SalleHandler] Erreur initialisation salle: $error');
     }
   }
 
   static Future<bool> quitterSalle() async {
     try {
+      final code = LivekitService.getRoom()?.name;
+
+      if (code != null) {
+        final leaveRequest = SessionDateRequest(
+          code: code,
+          date: DateTime.now().toUtc(),
+        );
+
+        try {
+          final response = await SessionService.leaveParticipant(
+            SessionEndRequest(code: leaveRequest.code, date: leaveRequest.date),
+          );
+
+          if (!response.success) {
+            await StorageUtil.saveParticipantLeave(
+              participantLeave: leaveRequest,
+            );
+          }
+        } catch (error) {
+          await StorageUtil.saveParticipantLeave(
+            participantLeave: leaveRequest,
+          );
+          debugPrint('[SalleHandler] Erreur depart participant: $error');
+        }
+      }
+
       await LivekitService.disconnect();
       return true;
     } catch (error) {
+      debugPrint('[SalleHandler] Erreur sortie salle: $error');
       return false;
     }
   }
@@ -62,8 +94,8 @@ class SalleHandler {
         await LivekitService.disableCamera();
       }
       return null;
-    } catch (error) {
-      return "Erreur lors du toggle caméra";
+    } catch (_) {
+      return 'Erreur lors du changement de camera';
     }
   }
 
@@ -75,8 +107,8 @@ class SalleHandler {
         await LivekitService.disableMicrophone();
       }
       return null;
-    } catch (error) {
-      return "Erreur lors du toggle microphone";
+    } catch (_) {
+      return 'Erreur lors du changement de microphone';
     }
   }
 }

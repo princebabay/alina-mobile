@@ -23,10 +23,16 @@ class _RegisterFormState extends State<RegisterForm> {
 
   Future<void> _submit() async {
     if (_loading) return;
+    debugPrint('[RegisterForm] Inscription demandée');
     setState(() { _loading = true; _error = null; });
     final error = await RegisterHandler.submit(nomUtilisateur: _usernameController.text.trim(), email: _emailController.text.trim(), motDePasse: _passwordController.text, confirmationMotDePasse: _confirmationController.text);
     if (!mounted) return;
-    if (error == null) { widget.onAuthenticated(); return; }
+    if (error == null) {
+      debugPrint('[RegisterForm] Navigation vers Home');
+      widget.onAuthenticated();
+      return;
+    }
+    debugPrint('[RegisterForm] Inscription échouée: $error');
     setState(() { _loading = false; _error = error; });
   }
 

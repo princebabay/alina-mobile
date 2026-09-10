@@ -21,10 +21,16 @@ class _LoginFormState extends State<LoginForm> {
 
   Future<void> _submit() async {
     if (_loading) return;
+    debugPrint('[LoginForm] Connexion demandée');
     setState(() { _loading = true; _error = null; });
     final error = await LoginHandler.submit(email: _emailController.text.trim(), motDePasse: _passwordController.text);
     if (!mounted) return;
-    if (error == null) { widget.onAuthenticated(); return; }
+    if (error == null) {
+      debugPrint('[LoginForm] Navigation vers Home');
+      widget.onAuthenticated();
+      return;
+    }
+    debugPrint('[LoginForm] Connexion échouée: $error');
     setState(() { _loading = false; _error = error; });
   }
 

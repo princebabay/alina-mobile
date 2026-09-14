@@ -14,6 +14,28 @@ class LivekitService {
     return room;
   }
 
+  static _ParticipantIdentity? _getParticipantIdentity(String identity) {
+    final match = RegExp(
+      r'^user-(\d+)-(dj|salle)$',
+      caseSensitive: false,
+    ).firstMatch(identity);
+
+    if (match == null) {
+      return null;
+    }
+
+    final utilisateurId = int.tryParse(match.group(1)!);
+    final role = match.group(2)!.toLowerCase();
+    if (utilisateurId == null) {
+      return null;
+    }
+
+    return _ParticipantIdentity(
+      utilisateurId: utilisateurId,
+      role: role == 'dj' ? ParticipantRole.dj : ParticipantRole.salle,
+    );
+  }
+
   static Future<Room> connect({required String token}) async {
     if (room != null) {
       await disconnect();
@@ -224,6 +246,56 @@ class LivekitService {
     );
   }
 
+  static void onCurrentUserConnectionQualityChanged({
+    required void Function(ConnectionQuality quality) onChanged,
+    void Function(ConnectionQuality quality, ParticipantRole role)?
+    onParticipantConnectionIssue,
+  }) {
+    final currentRoom = room;
+    final localParticipant = currentRoom?.localParticipant;
+
+    if (currentRoom == null || localParticipant == null) {
+      return;
+    }
+
+    final localIdentity = _getParticipantIdentity(localParticipant.identity);
+    if (localIdentity == null) {
+      return;
+    }
+
+    _roomEventSubscriptions.add(
+      currentRoom.events.listen((event) {
+        if (event is ParticipantConnectionQualityUpdatedEvent) {
+          final participantIdentity = _getParticipantIdentity(
+            event.participant.identity,
+          );
+
+          if (participantIdentity?.utilisateurId ==
+              localIdentity.utilisateurId) {
+            onChanged(event.connectionQuality);
+          }
+
+          if (participantIdentity != null &&
+              (event.connectionQuality == ConnectionQuality.poor ||
+                  event.connectionQuality == ConnectionQuality.lost)) {
+            onParticipantConnectionIssue?.call(
+              event.connectionQuality,
+              participantIdentity.role,
+            );
+          }
+        }
+
+        if (event is RoomReconnectingEvent || event is RoomDisconnectedEvent) {
+          onChanged(ConnectionQuality.lost);
+        }
+
+        if (event is RoomReconnectedEvent || event is RoomConnectedEvent) {
+          onChanged(ConnectionQuality.excellent);
+        }
+      }),
+    );
+  }
+
   static void analyzeAudio(
     RemoteAudioTrack track,
     void Function(double level) callback,
@@ -245,4 +317,13 @@ class LivekitService {
       },
     );
   }
+}
+
+enum ParticipantRole { dj, salle }
+
+class _ParticipantIdentity {
+  const _ParticipantIdentity({required this.utilisateurId, required this.role});
+
+  final int utilisateurId;
+  final ParticipantRole role;
 }

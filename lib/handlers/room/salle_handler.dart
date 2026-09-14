@@ -15,6 +15,7 @@ class SalleHandler {
     required void Function(bool) setMicrophoneEnabled,
     required void Function(RemoteVideoTrack?) setRemoteVideoTrack,
     required void Function(RemoteAudioTrack?) setRemoteAudioTrack,
+    required void Function(String) setError,
   }) async {
     try {
       final room = LivekitService.getRoom();
@@ -22,6 +23,7 @@ class SalleHandler {
 
       if (room == null || code == null) {
         debugPrint('[SalleHandler] Aucune room disponible');
+        setError('La salle n\'est pas connectée.');
         return;
       }
 
@@ -47,6 +49,7 @@ class SalleHandler {
       );
     } catch (error) {
       debugPrint('[SalleHandler] Erreur initialisation salle: $error');
+      setError('Impossible d\'initialiser la salle.');
     }
   }
 

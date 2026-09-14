@@ -38,7 +38,6 @@ class _SalleScreenState extends State<SalleScreen> {
   RemoteVideoTrack? _remoteVideoTrack;
   RemoteAudioTrack? _remoteAudioTrack;
   DateTime? _lastVisualizerUpdate;
-  Timer? _messageTimer;
 
   @override
   void initState() {
@@ -100,7 +99,12 @@ class _SalleScreenState extends State<SalleScreen> {
   }
 
   Future<void> _initializeRoom() => SalleHandler.initialize(
-    setIsEnDirect: (value) => _setIfMounted(() => _isEnDirect = value),
+    setIsEnDirect: (value) {
+      if (!value) {
+        _showError('Vous n\'êtes plus en direct.');
+      }
+      _setIfMounted(() => _isEnDirect = value);
+    },
     setIsConnected: (value) => _setIfMounted(() => _isConnected = value),
     setCameraEnabled: (value) => _setIfMounted(() => _cameraEnabled = value),
     setRoomName: (value) => _setIfMounted(() => _roomName = value),
@@ -111,6 +115,7 @@ class _SalleScreenState extends State<SalleScreen> {
     setRemoteVideoTrack: (value) =>
         _setIfMounted(() => _remoteVideoTrack = value),
     setRemoteAudioTrack: _setRemoteAudioTrack,
+    setError: _showError,
   );
 
   void _setIfMounted(VoidCallback update) {
@@ -135,12 +140,8 @@ class _SalleScreenState extends State<SalleScreen> {
   }
 
   void _showError(String message) {
-    _messageTimer?.cancel();
-    setState(() => _error = message);
+    if (mounted) setState(() => _error = message);
     debugPrint('[SalleScreen] Show error message : $message');
-    _messageTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) setState(() => _error = null);
-    });
   }
 
   Future<void> _toggleCamera() async {
@@ -211,7 +212,6 @@ class _SalleScreenState extends State<SalleScreen> {
 
   @override
   void dispose() {
-    _messageTimer?.cancel();
     unawaited(LivekitService.disconnect());
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     super.dispose();
@@ -248,6 +248,7 @@ class _SalleScreenState extends State<SalleScreen> {
                   isLive: _isEnDirect,
                   isFullscreen: _isFullscreen,
                   isLeaving: _isLeaving,
+                  setError: _showError,
                   onFullscreenPressed: () => unawaited(_toggleFullscreen()),
                   onLeavePressed: () => unawaited(_leaveRoom()),
                 ),
@@ -261,7 +262,13 @@ class _SalleScreenState extends State<SalleScreen> {
                 child: SafeArea(
                   top: !_isFullscreen,
                   bottom: false,
-                  child: AppMessage(message: _error!),
+                  child: AppMessage(
+                    message: _error!,
+                    duree: const Duration(seconds: 7),
+                    onClose: () {
+                      if (mounted) setState(() => _error = null);
+                    },
+                  ),
                 ),
               ),
             Positioned(

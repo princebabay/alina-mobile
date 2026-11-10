@@ -11,7 +11,7 @@ import '../types/api.response.dart';
 class AuthService {
   static final String apiUrl = dotenv.env['API_URL']!;
 
-  static Future<ApiResponse<LoginResponse>> register(
+  static Future<ApiResponse<RegisterResponse>> register(
     RegisterRequest data,
   ) async {
     try {
@@ -27,12 +27,40 @@ class AuthService {
 
       return ApiResponse.fromJson(
         json,
-        (jsonData) => LoginResponse.fromJson(jsonData),
+        (jsonData) => RegisterResponse.fromJson(jsonData),
       );
     } catch (error) {
       debugPrint('[AuthService] Erreur inscription: $error');
       rethrow;
     }
+  }
+
+  static Future<ApiResponse<LoginResponse>> verifierInscription(
+    VerifierInscriptionRequest data,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$apiUrl/auth/verifier-inscription'),
+      headers: await RequestUtil.authHeaders(),
+      body: jsonEncode(data.toJson()),
+    );
+    return ApiResponse.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+      (data) => LoginResponse.fromJson(data as Map<String, dynamic>),
+      statusCode: response.statusCode,
+    );
+  }
+
+  static Future<ApiResponse<Null>> renvoyerCodeInscription(String email) async {
+    final response = await http.post(
+      Uri.parse('$apiUrl/auth/renvoyer-code-inscription'),
+      headers: await RequestUtil.authHeaders(),
+      body: jsonEncode({'email': email}),
+    );
+    return ApiResponse.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+      null,
+      statusCode: response.statusCode,
+    );
   }
 
   static Future<ApiResponse<LoginResponse>> login(LoginRequest data) async {

@@ -1,44 +1,22 @@
-Contexte du projet :
+# Alina Mobile
 
-Je développe une application mobile Flutter.
+Application Flutter dédiée au rôle `CLIENT`. Les utilisateurs peuvent se connecter, rejoindre une session, échanger des messages et voter dans les sondages. Ne pas ajouter de fonctions DJ ni de capture audio ou vidéo.
 
-La logique métier et les communications avec l'API sont déjà implémentées.
-Les services et handlers nécessaires au fonctionnement de l'application existent déjà.
+## Architecture
 
-Structure actuelle :
+- `lib/services/` : contrats HTTP et connexion LiveKit.
+- `lib/handlers/` : orchestration de l'authentification, de la session et des interactions.
+- `lib/screens/` : navigation et état de l'interface.
+- `lib/widgets/` : composants réutilisables.
+- `lib/types/` : modèles et sérialisation.
 
-lib/
-├── handlers/
-│   ├── auth/
-│   └── room/
-├── screens/
-├── services/
-├── types/
-├── utils/
-└── widgets/
+Le frontend dans `../alina/frontend` sert de référence en lecture seule pour les API, les topics LiveKit et l'identité visuelle. Ne modifier que `alina-mobile`.
 
-Important :
-- Les services contiennent les communications avec l'API et les fonctionnalités techniques.
-- Les handlers contiennent la logique des actions/pages.
-- Les screens doivent principalement gérer l'UI et l'état de l'écran.
-- Les widgets doivent contenir les composants UI réutilisables.
-- Utilise les services et handlers existants.
-- Ne recrée pas une logique qui existe déjà.
-- Ne modifie pas les services/handlers sauf si c'est absolument nécessaire.
-- Je veux une application légère et adaptée aux appareils Android bas de gamme.
-- Évite les animations lourdes et les dépendances inutiles.
-- Le design doit être moderne, propre, responsive et cohérent entre les pages.
+## Conventions
 
-J'ai déjà créé auparavant une petite version de test du Login et du Register.
-Cette version était uniquement destinée aux tests et doit maintenant être remplacée/refaite avec une vraie interface.
-Il faut utiliser les services et handlers d'authentification déjà présents au lieu de recréer la logique de connexion ou d'inscription.
-
-Les principales pages de l'application seront :
-1. Auth / Login + Register
-2. Accueil
-3. Salle
-
-Pour le moment, ne code aucune page.
-Analyse uniquement la structure existante et les services/handlers disponibles afin de comprendre comment l'UI doit les utiliser.
-
-Quand je te demanderai ensuite de créer une page, travaille uniquement sur cette page et ses widgets associés.
+- Garder l'application légère pour les appareils Android modestes.
+- Nettoyer les listeners et timers LiveKit à la sortie de la room.
+- Valider les réponses API avant de mettre à jour l'interface.
+- Le code d'inscription à six chiffres est vérifié avant de stocker les tokens.
+- Couleurs de la marque : nuit chaude, ambre, braise et crème dans `app_colors.dart`.
+- Vérifier avec `flutter test --no-pub` et `dart analyze lib test`.

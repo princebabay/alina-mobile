@@ -13,6 +13,7 @@ class AppTextField extends StatefulWidget {
     this.textInputAction,
     this.onSubmitted,
     this.enabled = true,
+    this.icon,
   });
 
   final TextEditingController controller;
@@ -23,6 +24,7 @@ class AppTextField extends StatefulWidget {
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
   final bool enabled;
+  final IconData? icon;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -55,13 +57,28 @@ class _AppTextFieldState extends State<AppTextField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.label.toUpperCase(), style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1)),
+        Text(
+          widget.label.toUpperCase(),
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.1,
+          ),
+        ),
         const SizedBox(height: 8),
         AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            boxShadow: focused ? [BoxShadow(color: AppColors.primary.withValues(alpha: .14), blurRadius: 14)] : null,
+            boxShadow: focused
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: .14),
+                      blurRadius: 14,
+                    ),
+                  ]
+                : null,
           ),
           child: TextField(
             controller: widget.controller,
@@ -77,14 +94,41 @@ class _AppTextFieldState extends State<AppTextField> {
               hintStyle: const TextStyle(color: AppColors.textMuted),
               filled: true,
               fillColor: AppColors.surfaceSecondary,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.primary, width: 1.2)),
-              disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
-              suffixIcon: widget.obscureText ? IconButton(
-                onPressed: widget.enabled ? () => setState(() => _obscured = !_obscured) : null,
-                icon: Icon(_obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: AppColors.textSecondary),
-              ) : null,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: AppColors.primary,
+                  width: 1.2,
+                ),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              suffixIcon: widget.obscureText
+                  ? IconButton(
+                      onPressed: widget.enabled
+                          ? () => setState(() => _obscured = !_obscured)
+                          : null,
+                      icon: Icon(
+                        _obscured
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: AppColors.textSecondary,
+                      ),
+                    )
+                  : null,
+              prefixIcon: widget.icon == null
+                  ? null
+                  : Icon(widget.icon, color: AppColors.textSecondary, size: 20),
             ),
           ),
         ),

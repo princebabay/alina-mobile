@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../handlers/auth/login_handler.dart';
 import '../widgets/auth/login_form.dart';
 import '../widgets/auth/register_form.dart';
+import '../widgets/auth/verification_form.dart';
+import '../types/auth.request.dart';
+import '../types/auth.response.dart';
 import '../widgets/common/app_colors.dart';
 import '../widgets/common/app_logo.dart';
 import 'home_screen.dart';
@@ -16,6 +19,8 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool _isLogin = true;
+  RegisterRequest? _pendingRegistration;
+  RegisterResponse? _registrationResponse;
   bool _initializing = true;
 
   @override
@@ -53,9 +58,17 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       );
     }
-    final title = _isLogin ? 'Bon retour parmi nous' : 'Créez votre compte';
-    final subtitle = _isLogin
-        ? 'Connectez-vous pour rejoindre votre salle.'
+    final verifying =
+        _pendingRegistration != null && _registrationResponse != null;
+    final title = verifying
+        ? 'Vérifiez votre email'
+        : _isLogin
+        ? 'Bon retour parmi nous'
+        : 'Créez votre compte';
+    final subtitle = verifying
+        ? 'Saisissez le code reçu pour activer votre compte.'
+        : _isLogin
+        ? 'Connectez-vous pour rejoindre une room.'
         : 'Rejoignez Alina en quelques instants.';
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -104,32 +117,51 @@ class _AuthScreenState extends State<AuthScreen> {
                               key: const ValueKey('login'),
                               onAuthenticated: _goHome,
                             )
+                          : verifying
+                          ? VerificationForm(
+                              key: const ValueKey('verification'),
+                              registration: _pendingRegistration!,
+                              response: _registrationResponse!,
+                              onAuthenticated: _goHome,
+                              onBack: () => setState(() {
+                                _pendingRegistration = null;
+                                _registrationResponse = null;
+                              }),
+                            )
                           : RegisterForm(
                               key: const ValueKey('register'),
-                              onAuthenticated: _goHome,
+                              onCodeSent: (registration, response) =>
+                                  setState(() {
+                                    _pendingRegistration = registration;
+                                    _registrationResponse = response;
+                                  }),
                             ),
                     ),
                     const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _isLogin
-                              ? 'Pas encore de compte ?'
-                              : 'Déjà inscrit ?',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
+                    if (!verifying)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _isLogin
+                                ? 'Pas encore de compte ?'
+                                : 'Déjà inscrit ?',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                            ),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () => setState(() => _isLogin = !_isLogin),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.primaryLight,
+                          TextButton(
+                            onPressed: () =>
+                                setState(() => _isLogin = !_isLogin),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primaryLight,
+                            ),
+                            child: Text(
+                              _isLogin ? "S'inscrire" : 'Se connecter',
+                            ),
                           ),
-                          child: Text(_isLogin ? "S'inscrire" : 'Se connecter'),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                   ],
                 ),
               ),

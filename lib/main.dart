@@ -34,6 +34,10 @@ class MyApp extends StatelessWidget {
           surface: AppColors.surface,
           onSurface: AppColors.textPrimary,
         ),
+        appBarTheme: const AppBarTheme(foregroundColor: AppColors.textPrimary),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+        ),
       ),
       home: const BackendStartupScreen(),
     );

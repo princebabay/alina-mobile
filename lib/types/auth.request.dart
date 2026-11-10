@@ -41,3 +41,16 @@ class RefreshTokenRequest {
     return {'refreshToken': refreshToken};
   }
 }
+
+class VerifierInscriptionRequest extends RegisterRequest {
+  final String code;
+  VerifierInscriptionRequest({
+    required super.nomUtilisateur,
+    required super.email,
+    required super.motDePasse,
+    required super.confirmationMotDePasse,
+    required this.code,
+  });
+  @override
+  Map<String, dynamic> toJson() => {...super.toJson(), 'code': code};
+}

@@ -23,6 +23,10 @@ class HomeHandler {
         return null;
       }
 
+      if (activeSession.role != 'CLIENT') {
+        throw Exception('Cette session ne correspond pas au rôle client.');
+      }
+
       final session = activeSession.session;
       final sessionIsClosed =
           !session.estActif ||
@@ -84,7 +88,7 @@ class HomeHandler {
 
     try {
       final joinSession = await SessionService.joinSession(
-        JoinSessionRequest(code: code, role: "SALLE"),
+        JoinSessionRequest(code: code, role: "CLIENT"),
       );
 
       if (!joinSession.success) {
@@ -107,10 +111,6 @@ class HomeHandler {
       debugPrint('[HomeHandler] Déconnexion utilisateur');
       final refreshToken = await StorageUtil.getRefreshToken();
       if (refreshToken != null) {
-        // final response = await AuthService.revokeTokenAPI(
-        //   RefreshTokenRequest(refreshToken: refreshToken),
-        // );
-
         try {
           await AuthService.revokeTokenAPI(
             RefreshTokenRequest(refreshToken: refreshToken),
@@ -121,15 +121,10 @@ class HomeHandler {
           );
           // best effort : on déconnecte localement quoi qu'il arrive
         }
-
-        await StorageUtil.deleteAccessToken();
-        await StorageUtil.deleteRefreshToken();
-
-        debugPrint('[HomeHandler] Déconnexion locale terminée');
-        return true;
       }
-      debugPrint('[HomeHandler] Aucun refresh token à révoquer');
-      return false;
+      await StorageUtil.deleteAccessToken();
+      await StorageUtil.deleteRefreshToken();
+      return true;
     } catch (error) {
       debugPrint('[HomeHandler] Erreur de déconnexion: $error');
       return false;

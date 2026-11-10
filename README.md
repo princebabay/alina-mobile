@@ -1,17 +1,22 @@
-# alina_mobile
+# Alina Mobile
 
-A new Flutter project.
+Application Flutter pour rejoindre une room Alina en tant que client, envoyer des messages et voter aux sondages.
 
-## Getting Started
+## Configuration
 
-This project is a starting point for a Flutter application.
+Définir `API_URL` et `VITE_LIVEKIT_URL` dans `.env` (voir `.env.example`), puis lancer :
 
-A few resources to get you started if this is your first Flutter project:
+```sh
+flutter pub get
+flutter run
+flutter build apk --release
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+L'inscription envoie un code à six chiffres par email. Les tokens sont enregistrés localement après sa vérification. La room utilise l'API pour conserver les messages et les votes, et LiveKit pour notifier les autres participants.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Vérification
+
+```sh
+flutter test --no-pub
+dart analyze lib test
+```

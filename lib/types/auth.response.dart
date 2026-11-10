@@ -40,3 +40,20 @@ class LoginResponse {
     );
   }
 }
+
+class RegisterResponse {
+  final String email;
+  final bool codeEnvoye;
+  final int validiteMinutes;
+  RegisterResponse({
+    required this.email,
+    required this.codeEnvoye,
+    required this.validiteMinutes,
+  });
+  factory RegisterResponse.fromJson(Map<String, dynamic> json) =>
+      RegisterResponse(
+        email: json['email'] as String,
+        codeEnvoye: json['codeEnvoye'] as bool,
+        validiteMinutes: json['validiteMinutes'] as int,
+      );
+}

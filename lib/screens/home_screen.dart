@@ -11,7 +11,7 @@ import '../widgets/common/app_message.dart';
 import '../widgets/common/backend_connection_loader.dart';
 import '../widgets/home/session_code_field.dart';
 import 'auth_screen.dart';
-import 'salle_screen.dart';
+import 'client_room_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (role != null) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const SalleScreen()),
+          MaterialPageRoute(builder: (_) => const ClientRoomScreen()),
         );
         return;
       }
@@ -70,10 +70,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final error = await HomeHandler.joinRoom(code: _code);
     if (!mounted) return;
     if (error == null) {
-      debugPrint('[HomeScreen] Navigation vers Salle');
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const SalleScreen()));
+      debugPrint('[HomeScreen] Navigation vers la room client');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const ClientRoomScreen()),
+      );
       return;
     }
     debugPrint('[HomeScreen] Impossible de rejoindre la session: $error');
@@ -145,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 9),
                     const Text(
-                      'Saisissez le code à 6 caractères partagé par votre salle.',
+                      'Saisissez le code à 6 caractères de votre session.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textNormal,

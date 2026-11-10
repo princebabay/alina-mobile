@@ -35,7 +35,7 @@ class _SessionCodeFieldState extends State<SessionCodeField> {
       ) {
         _controllers[index + offset].text = characters[offset];
       }
-      final nextIndex = (index + characters.length).clamp(0, 5) as int;
+      final nextIndex = (index + characters.length).clamp(0, 5);
       _focusNodes[nextIndex].requestFocus();
     } else if (characters.isNotEmpty && index < 5) {
       _focusNodes[index + 1].requestFocus();
@@ -61,61 +61,65 @@ class _SessionCodeFieldState extends State<SessionCodeField> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(6, (index) {
-        return SizedBox(
-          width: 44,
-          height: 56,
-          child: TextField(
-            controller: _controllers[index],
-            focusNode: _focusNodes[index],
-            enabled: widget.enabled,
-            textAlign: TextAlign.center,
-            textCapitalization: TextCapitalization.characters,
-            keyboardType: TextInputType.text,
-            textInputAction: index == 5
-                ? TextInputAction.done
-                : TextInputAction.next,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
-            ],
-            onChanged: (value) {
-              final upper = value.toUpperCase();
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: SizedBox(
+              height: 56,
+              child: TextField(
+                controller: _controllers[index],
+                focusNode: _focusNodes[index],
+                enabled: widget.enabled,
+                textAlign: TextAlign.center,
+                textCapitalization: TextCapitalization.characters,
+                keyboardType: TextInputType.text,
+                textInputAction: index == 5
+                    ? TextInputAction.done
+                    : TextInputAction.next,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                ],
+                onChanged: (value) {
+                  final upper = value.toUpperCase();
 
-              if (value != upper) {
-                _controllers[index].value = TextEditingValue(
-                  text: upper,
-                  selection: TextSelection.collapsed(offset: upper.length),
-                );
-              }
+                  if (value != upper) {
+                    _controllers[index].value = TextEditingValue(
+                      text: upper,
+                      selection: TextSelection.collapsed(offset: upper.length),
+                    );
+                  }
 
-              _handleChanged(index, upper);
-            },
-            onSubmitted: (_) {
-              if (index < 5) _focusNodes[index + 1].requestFocus();
-            },
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-            ),
-            decoration: InputDecoration(
-              counterText: '',
-              filled: true,
-              fillColor: AppColors.surfaceSecondary,
-              contentPadding: EdgeInsets.zero,
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppColors.primary,
-                  width: 1.2,
+                  _handleChanged(index, upper);
+                },
+                onSubmitted: (_) {
+                  if (index < 5) _focusNodes[index + 1].requestFocus();
+                },
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                 ),
-              ),
-              disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                decoration: InputDecoration(
+                  counterText: '',
+                  filled: true,
+                  fillColor: AppColors.surfaceSecondary,
+                  contentPadding: EdgeInsets.zero,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: AppColors.primary,
+                      width: 1.2,
+                    ),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                ),
               ),
             ),
           ),

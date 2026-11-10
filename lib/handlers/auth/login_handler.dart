@@ -46,6 +46,8 @@ class LoginHandler {
         );
 
         if (!response.success) {
+          await StorageUtil.deleteAccessToken();
+          await StorageUtil.deleteRefreshToken();
           debugPrint('[LoginHandler] Session existante invalide');
           return true;
         }

@@ -32,5 +32,7 @@ Le workflow [Mobile - APK et IPA de test](.github/workflows/mobile-test-builds.y
 
 Les builds utilisent Flutter `3.44.8`, la version du SDK utilisée par le projet, et le numéro de l'exécution comme numéro de build. Chaque plateforme exécute l'analyse Dart et les tests avant compilation. Le fichier `.env` est créé sur les runners à partir des deux URL ; ces valeurs sont embarquées dans l'application et doivent rester publiques.
 
+Le job iOS sélectionne explicitement Xcode `26.1.1` sur `macos-15`, conformément aux [prérequis de connectivity_plus](https://github.com/fluttercommunity/plus_plugins/tree/main/packages/connectivity_plus/connectivity_plus#requirements). L'ancien Xcode sélectionné par défaut provoque l'erreur Swift `Value of type 'NWPath' has no member 'isUltraConstrained'`. Les versions de Xcode et du SDK iOS sélectionnées sont affichées dans les logs avant compilation.
+
 - **Android** : APK universel en mode release, signé avec la clé de debug du runner comme prévu par la configuration Android actuelle. Il est installable pour les tests. La clé peut changer entre deux exécutions ; dans ce cas, désinstaller l'ancienne version avant d'installer la nouvelle (cela efface ses données locales).
 - **iOS** : IPA **non signée**, compilée sur macOS et nommée `alina-test-ios-unsigned-<numéro>.ipa`. Elle doit être signée avec un certificat et un profil de provisioning Apple appropriés avant installation sur iPhone. Aucun secret Apple n'est nécessaire pour générer ce fichier. Cette IPA ne peut pas être envoyée telle quelle à TestFlight ou à l'App Store.

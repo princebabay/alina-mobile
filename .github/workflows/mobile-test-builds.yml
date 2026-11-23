@@ -83,6 +83,15 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # connectivity_plus >= 7.1 uses NWPath.isUltraConstrained and requires
+      # Xcode >= 26.1.1; macos-15 still defaults to Xcode 16.4.
+      - name: Selectionner Xcode 26.1.1
+        if: matrix.platform == 'ios'
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_26.1.1.app/Contents/Developer
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable

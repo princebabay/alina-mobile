@@ -20,8 +20,8 @@ permissions:
 
 env:
   FLUTTER_VERSION: "3.44.8"
-  API_URL: ${{ inputs.api_url }}
-  VITE_LIVEKIT_URL: ${{ inputs.livekit_url }}
+  API_URL: ${{ inputs.api_url || vars.API_URL }}
+  VITE_LIVEKIT_URL: ${{ inputs.livekit_url || vars.VITE_LIVEKIT_URL }}
 
 jobs:
   builds:

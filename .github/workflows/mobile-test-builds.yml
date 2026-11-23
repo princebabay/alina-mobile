@@ -1,0 +1,168 @@
+name: Mobile - APK et IPA de test
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: URL publique de l'API de test, suffixe /api inclus
+        required: true
+        type: string
+      livekit_url:
+        description: URL wss du serveur LiveKit de test
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.44.8'
+  API_URL: ${{ inputs.api_url }}
+  VITE_LIVEKIT_URL: ${{ inputs.livekit_url }}
+
+jobs:
+  builds:
+    name: Test ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: android
+            runner: ubuntu-latest
+          - platform: ios
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Preparer la configuration de test
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from urllib.parse import urlsplit
+
+          values = {}
+          for key, schemes in (
+              ('API_URL', ('http', 'https')),
+              ('VITE_LIVEKIT_URL', ('ws', 'wss')),
+          ):
+              value = os.environ[key].strip()
+              parsed = urlsplit(value)
+              if (
+                  parsed.scheme not in schemes
+                  or not parsed.hostname
+                  or parsed.username is not None
+                  or parsed.password is not None
+                  or any(c.isspace() or ord(c) < 32 or c in "\"'\\$#" for c in value)
+              ):
+                  raise SystemExit(f'{key}: fournir une URL valide sans identifiants ni caracteres dotenv speciaux.')
+              values[key] = value
+          Path('.env').write_text(
+              ''.join(f'{key}={value}\n' for key, value in values.items()),
+              encoding='utf-8',
+          )
+          PY
+
+      - uses: actions/setup-java@v4
+        if: matrix.platform == 'android'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Installer les dependances
+        run: flutter pub get --enforce-lockfile
+
+      - name: Analyser le code
+        run: dart analyze lib test
+
+      - name: Executer les tests
+        run: flutter test --no-pub
+
+      - name: Generer l'APK de test
+        if: matrix.platform == 'android'
+        run: |
+          flutter build apk --release --no-pub --build-number "$GITHUB_RUN_NUMBER"
+          mkdir -p build/release-test
+          cp build/app/outputs/flutter-apk/app-release.apk "build/release-test/alina-test-android-${GITHUB_RUN_NUMBER}.apk"
+
+      # Flutter skips IPA export with --no-codesign. Package the device app
+      # explicitly; this IPA must be signed before installation on an iPhone.
+      - name: Generer l'IPA non signee
+        if: matrix.platform == 'ios'
+        run: |
+          flutter build ios --release --no-pub --no-codesign --build-number "$GITHUB_RUN_NUMBER"
+          test -f build/ios/iphoneos/Runner.app/Info.plist
+          mkdir -p build/release-test build/ios/unsigned-ipa/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ios/unsigned-ipa/Payload/
+          (cd build/ios/unsigned-ipa && zip -qry "../../release-test/alina-test-ios-unsigned-${GITHUB_RUN_NUMBER}.ipa" Payload)
+
+      - name: Verifier les fichiers et calculer leurs empreintes
+        env:
+          BUILD_PLATFORM: ${{ matrix.platform }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import zipfile
+          from pathlib import Path
+
+          platform = os.environ['BUILD_PLATFORM']
+          directory = Path('build/release-test')
+          extension = 'apk' if platform == 'android' else 'ipa'
+          artifacts = list(directory.glob(f'*.{extension}'))
+          if len(artifacts) != 1 or artifacts[0].stat().st_size == 0:
+              raise SystemExit(f'Un fichier .{extension} non vide est attendu.')
+          artifact = artifacts[0]
+          with zipfile.ZipFile(artifact) as archive:
+              expected = 'AndroidManifest.xml' if platform == 'android' else 'Payload/Runner.app/Info.plist'
+              if expected not in archive.namelist() or archive.testzip() is not None:
+                  raise SystemExit(f'Archive {extension} invalide.')
+          checksum = hashlib.sha256(artifact.read_bytes()).hexdigest()
+          directory.joinpath('SHA256SUMS.txt').write_text(
+              f'{checksum}  {artifact.name}\n', encoding='utf-8',
+          )
+          manifest = {
+              'file': artifact.name,
+              'sha256': checksum,
+              'platform': platform,
+              'signing': 'android-debug-key' if platform == 'android' else 'unsigned',
+              'commit': os.environ['GITHUB_SHA'],
+              'build_number': os.environ['GITHUB_RUN_NUMBER'],
+              'flutter_version': os.environ['FLUTTER_VERSION'],
+          }
+          directory.joinpath(f'manifest-{platform}.json').write_text(
+              json.dumps(manifest, indent=2) + '\n', encoding='utf-8',
+          )
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write(f'### {artifact.name}\n\nSHA-256 : `{checksum}`\n\n')
+              if platform == 'ios':
+                  summary.write('IPA non signee : signature Apple necessaire avant installation sur iPhone.\n')
+              else:
+                  summary.write('APK de test signe avec la cle de debug Android du runner.\n')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alina-test-${{ matrix.platform }}-${{ github.run_number }}
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
+          path: build/release-test/
